@@ -10,6 +10,7 @@ import { TaskList } from './task-list';
 import { TaskFormModal } from './task-form-modal';
 import { DeleteConfirmDialog } from './delete-confirm-dialog';
 import { CsvToolbar } from './csv-toolbar';
+import { GanttView } from './gantt-view';
 
 type ModalState =
   | { kind: 'none' }
@@ -19,6 +20,7 @@ type ModalState =
 
 export function TasksPageClient({ initialTasks }: { initialTasks: Task[] }) {
   const [modal, setModal] = useState<ModalState>({ kind: 'none' });
+  const [view, setView] = useState<'list' | 'gantt'>('list');
   const [, startTransition] = useTransition();
 
   const close = () => setModal({ kind: 'none' });
@@ -82,6 +84,22 @@ export function TasksPageClient({ initialTasks }: { initialTasks: Task[] }) {
       <Flex justify="space-between" align="center" mb={6} gap={4}>
         <Heading size="lg">WBS</Heading>
         <Flex gap={2} align="center">
+          <Flex gap={1} align="center">
+            <Button
+              size="sm"
+              variant={view === 'list' ? 'solid' : 'outline'}
+              onClick={() => setView('list')}
+            >
+              목록
+            </Button>
+            <Button
+              size="sm"
+              variant={view === 'gantt' ? 'solid' : 'outline'}
+              onClick={() => setView('gantt')}
+            >
+              간트
+            </Button>
+          </Flex>
           <CsvToolbar existingTasks={initialTasks} />
           <Button onClick={() => setModal({ kind: 'create', parentId: null })}>
             + 작업 추가
@@ -89,13 +107,17 @@ export function TasksPageClient({ initialTasks }: { initialTasks: Task[] }) {
         </Flex>
       </Flex>
 
-      <TaskList
-        tasks={initialTasks}
-        onRowClick={(task) => setModal({ kind: 'edit', task })}
-        onAddChildClick={(task) => setModal({ kind: 'create', parentId: task.id })}
-        onDeleteClick={(task) => void openDelete(task)}
-        onStatusCycle={handleStatusCycle}
-      />
+      {view === 'list' ? (
+        <TaskList
+          tasks={initialTasks}
+          onRowClick={(task) => setModal({ kind: 'edit', task })}
+          onAddChildClick={(task) => setModal({ kind: 'create', parentId: task.id })}
+          onDeleteClick={(task) => void openDelete(task)}
+          onStatusCycle={handleStatusCycle}
+        />
+      ) : (
+        <GanttView tasks={initialTasks} />
+      )}
 
       {modal.kind === 'create' && (
         <Box mt={6}>
