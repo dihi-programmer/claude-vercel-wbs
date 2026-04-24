@@ -119,35 +119,29 @@ export function TasksPageClient({ initialTasks }: { initialTasks: Task[] }) {
         <GanttView tasks={initialTasks} />
       )}
 
-      {/* Dialog 들은 Portal 로 body 에 렌더되므로 Box 래퍼 불필요 (#25). */}
-      {modal.kind === 'create' && (
-        <TaskFormModal
-          mode="create"
-          open
-          onSubmit={handleCreateSubmit}
-          onClose={close}
-        />
-      )}
+      {/* Dialog 들은 항상 마운트 — open prop 만 토글해야 Ark UI 가 body style
+          (pointer-events, overflow) 을 제대로 정리함 (#25 후속 수정). */}
+      <TaskFormModal
+        mode="create"
+        open={modal.kind === 'create'}
+        onSubmit={handleCreateSubmit}
+        onClose={close}
+      />
 
-      {modal.kind === 'edit' && (
-        <TaskFormModal
-          key={modal.task.id}
-          mode="edit"
-          open
-          initialValue={modal.task}
-          onSubmit={handleEditSubmit}
-          onClose={close}
-        />
-      )}
+      <TaskFormModal
+        mode="edit"
+        open={modal.kind === 'edit'}
+        initialValue={modal.kind === 'edit' ? modal.task : undefined}
+        onSubmit={handleEditSubmit}
+        onClose={close}
+      />
 
-      {modal.kind === 'delete' && (
-        <DeleteConfirmDialog
-          open
-          childCount={modal.childCount}
-          onConfirm={handleDeleteConfirm}
-          onCancel={close}
-        />
-      )}
+      <DeleteConfirmDialog
+        open={modal.kind === 'delete'}
+        childCount={modal.kind === 'delete' ? modal.childCount : 0}
+        onConfirm={handleDeleteConfirm}
+        onCancel={close}
+      />
     </Box>
   );
 }

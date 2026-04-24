@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Box, Button, Dialog, Input, Portal, Stack, Text, Textarea } from '@chakra-ui/react';
 import type { TaskInput } from '@/lib/validation/task';
 import { validateTaskInput, applyProgressCompletionRule } from '@/lib/validation/task';
@@ -50,6 +50,12 @@ function toTaskInput(v: FormValues): TaskInput {
 
 export function TaskFormModal({ mode, open, initialValue, onSubmit, onClose }: TaskFormModalProps) {
   const [values, setValues] = useState<FormValues>(() => initialize(initialValue));
+
+  // Dialog.Root 는 항상 마운트되고 open 토글로 표시/숨김만 전환 (#25 후속 수정).
+  // open=true 로 전환될 때마다 form state 를 initialValue 기준으로 재초기화.
+  useEffect(() => {
+    if (open) setValues(initialize(initialValue));
+  }, [open, initialValue]);
 
   const validation = useMemo(() => validateTaskInput(toTaskInput(values)), [values]);
   const errors = validation.valid ? ({} as Record<string, string>) : validation.errors;
