@@ -50,3 +50,17 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: npx drizzle-kit migrate
+
+  deploy-vercel:
+    # 마이그레이션 성공 후 Vercel 배포 훅 트리거 → 최신 스키마 위에 앱이 올라감.
+    # Vercel 대시보드 → 프로젝트 Settings → Git → Deploy Hooks 에서 발급된 URL.
+    # 공개 URL 이지만 경로에 토큰이 포함되어 있어 이 URL 을 아는 사람만 트리거 가능.
+    name: Trigger Vercel deploy
+    runs-on: ubuntu-latest
+    needs: migrate
+    timeout-minutes: 2
+    steps:
+      - name: Call Vercel deploy hook
+        run: |
+          curl -sSf -X POST "https://api.vercel.com/v1/integrations/deploy/prj_ngI6OknWJylRPHSsmzV4w8edk3s4/ymO6bX5UsB"
+          echo "Vercel deploy hook triggered"
