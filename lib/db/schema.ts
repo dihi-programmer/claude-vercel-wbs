@@ -21,3 +21,5 @@ export const tasks = pgTable(
     progressCheck: check('tasks_progress_check', sql`${t.progress} between 0 and 100`),
   }),
 );
+
+export type Task = typeof tasks.$inferSelect;
