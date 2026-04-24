@@ -20,6 +20,27 @@ export class TaskValidationError extends Error {
   }
 }
 
+export type TaskStatus = 'todo' | 'doing' | 'done';
+
+const STATUS_CYCLE: Record<TaskStatus, TaskStatus> = {
+  todo: 'doing',
+  doing: 'done',
+  done: 'todo',
+};
+
+export function cycleStatus(current: TaskStatus): TaskStatus {
+  return STATUS_CYCLE[current];
+}
+
+// SPEC §3 C-2: progress === 100 이면 status 를 'done' 으로 자동 승격.
+// 역방향(단수 status 변화 → progress 조정)은 일부러 안 함 — 사용자가 직접 조정.
+export function applyProgressCompletionRule(input: TaskInput): TaskInput {
+  if (input.progress === 100 && input.status !== 'done') {
+    return { ...input, status: 'done' };
+  }
+  return input;
+}
+
 const ALLOWED_STATUS = ['todo', 'doing', 'done'] as const;
 
 export function validateTaskInput(input: TaskInput): ValidationResult {

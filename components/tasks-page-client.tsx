@@ -3,7 +3,8 @@
 import { useState, useTransition } from 'react';
 import { Box, Button, Flex, Heading } from '@chakra-ui/react';
 import type { Task } from '@/lib/db/schema';
-import type { TaskInput } from '@/lib/validation/task';
+import type { TaskInput, TaskStatus } from '@/lib/validation/task';
+import { cycleStatus } from '@/lib/validation/task';
 import { createTask, updateTask, deleteTask, getDescendantCount } from '@/app/actions/tasks';
 import { TaskList } from './task-list';
 import { TaskFormModal } from './task-form-modal';
@@ -64,6 +65,17 @@ export function TasksPageClient({ initialTasks }: { initialTasks: Task[] }) {
     setModal({ kind: 'delete', task, childCount });
   };
 
+  const handleStatusCycle = (task: Task) => {
+    const next = cycleStatus(task.status as TaskStatus);
+    startTransition(async () => {
+      try {
+        await updateTask(task.id, { status: next });
+      } catch (err) {
+        console.error('updateTask (status cycle) failed', err);
+      }
+    });
+  };
+
   return (
     <Box p={6} maxW="5xl" mx="auto">
       <Flex justify="space-between" align="center" mb={6}>
@@ -78,6 +90,7 @@ export function TasksPageClient({ initialTasks }: { initialTasks: Task[] }) {
         onRowClick={(task) => setModal({ kind: 'edit', task })}
         onAddChildClick={(task) => setModal({ kind: 'create', parentId: task.id })}
         onDeleteClick={(task) => void openDelete(task)}
+        onStatusCycle={handleStatusCycle}
       />
 
       {modal.kind === 'create' && (

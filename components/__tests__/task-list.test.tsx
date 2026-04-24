@@ -114,6 +114,44 @@ describe('<TaskList />', () => {
     });
   });
 
+  describe('상태 배지 배선 (Issue #5 Stage 5, SPEC §3 C-2)', () => {
+    it('onStatusCycle 없으면 배지는 한글 라벨만 읽기 전용 표시', () => {
+      const t = makeTask({ id: 'x', title: 'X', status: 'todo' });
+      renderWithChakra(<TaskList tasks={[t]} onRowClick={vi.fn()} />);
+      expect(screen.getByText('할 일')).toBeInTheDocument();
+    });
+
+    it('onStatusCycle 제공 시 배지 버튼 클릭 → 해당 task 로 콜백 호출', () => {
+      const t = makeTask({ id: 'x', title: 'X', status: 'doing' });
+      const onStatusCycle = vi.fn();
+      renderWithChakra(
+        <TaskList
+          tasks={[t]}
+          onRowClick={vi.fn()}
+          onStatusCycle={onStatusCycle}
+        />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: /진행 중/ }));
+      expect(onStatusCycle).toHaveBeenCalledWith(t);
+    });
+
+    it('배지 클릭은 onRowClick 호출 안 됨 (stopPropagation)', () => {
+      const t = makeTask({ id: 'x', title: 'X', status: 'todo' });
+      const onStatusCycle = vi.fn();
+      const onRowClick = vi.fn();
+      renderWithChakra(
+        <TaskList
+          tasks={[t]}
+          onRowClick={onRowClick}
+          onStatusCycle={onStatusCycle}
+        />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: /할 일/ }));
+      expect(onStatusCycle).toHaveBeenCalled();
+      expect(onRowClick).not.toHaveBeenCalled();
+    });
+  });
+
   describe('펼침/접힘 (Stage 3, SPEC §5 E-2)', () => {
     it('접기 버튼 클릭 → ▶ 로 바뀌고 자식 숨김', () => {
       const p = makeTask({ id: 'p', title: 'Parent' });

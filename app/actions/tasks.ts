@@ -4,7 +4,12 @@ import { eq, sql as drizzleSql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { tasks } from '@/lib/db/schema';
-import { validateTaskInput, TaskValidationError, type TaskInput } from '@/lib/validation/task';
+import {
+  validateTaskInput,
+  applyProgressCompletionRule,
+  TaskValidationError,
+  type TaskInput,
+} from '@/lib/validation/task';
 
 function throwIfInvalid(input: TaskInput): void {
   const result = validateTaskInput(input);
@@ -12,19 +17,20 @@ function throwIfInvalid(input: TaskInput): void {
 }
 
 export async function createTask(input: TaskInput) {
-  throwIfInvalid(input);
+  const processed = applyProgressCompletionRule(input);
+  throwIfInvalid(processed);
 
   const [row] = await db
     .insert(tasks)
     .values({
-      title: (input.title ?? '').trim(),
-      description: input.description ?? null,
-      assignee: input.assignee ?? null,
-      status: input.status ?? 'todo',
-      progress: input.progress ?? 0,
-      startDate: input.startDate ?? null,
-      dueDate: input.dueDate ?? null,
-      parentId: input.parentId ?? null,
+      title: (processed.title ?? '').trim(),
+      description: processed.description ?? null,
+      assignee: processed.assignee ?? null,
+      status: processed.status ?? 'todo',
+      progress: processed.progress ?? 0,
+      startDate: processed.startDate ?? null,
+      dueDate: processed.dueDate ?? null,
+      parentId: processed.parentId ?? null,
     })
     .returning();
 
@@ -38,27 +44,30 @@ export async function updateTask(id: string, patch: TaskInput) {
     throw new Error(`Task ${id} 를 찾을 수 없습니다`);
   }
 
-  // merge existing + patch 로 검증 — 부분 patch 에서도 전체 불변식을 유지.
+  // SPEC §3 C-2 규칙: progress=100 이면 status='done' 자동 승격 (역방향 없음).
+  const processed = applyProgressCompletionRule(patch);
+
+  // merge existing + processed 로 검증 — 부분 patch 에서도 전체 불변식을 유지.
   throwIfInvalid({
-    title: patch.title ?? existing.title,
-    description: 'description' in patch ? patch.description : existing.description,
-    assignee: 'assignee' in patch ? patch.assignee : existing.assignee,
-    status: patch.status ?? existing.status,
-    progress: patch.progress ?? existing.progress,
-    startDate: 'startDate' in patch ? patch.startDate : existing.startDate,
-    dueDate: 'dueDate' in patch ? patch.dueDate : existing.dueDate,
-    parentId: 'parentId' in patch ? patch.parentId : existing.parentId,
+    title: processed.title ?? existing.title,
+    description: 'description' in processed ? processed.description : existing.description,
+    assignee: 'assignee' in processed ? processed.assignee : existing.assignee,
+    status: processed.status ?? existing.status,
+    progress: processed.progress ?? existing.progress,
+    startDate: 'startDate' in processed ? processed.startDate : existing.startDate,
+    dueDate: 'dueDate' in processed ? processed.dueDate : existing.dueDate,
+    parentId: 'parentId' in processed ? processed.parentId : existing.parentId,
   });
 
   const updates: Record<string, unknown> = { updatedAt: new Date() };
-  if (patch.title !== undefined) updates.title = patch.title.trim();
-  if ('description' in patch) updates.description = patch.description;
-  if ('assignee' in patch) updates.assignee = patch.assignee;
-  if (patch.status !== undefined) updates.status = patch.status;
-  if (patch.progress !== undefined) updates.progress = patch.progress;
-  if ('startDate' in patch) updates.startDate = patch.startDate;
-  if ('dueDate' in patch) updates.dueDate = patch.dueDate;
-  if ('parentId' in patch) updates.parentId = patch.parentId;
+  if (processed.title !== undefined) updates.title = processed.title.trim();
+  if ('description' in processed) updates.description = processed.description;
+  if ('assignee' in processed) updates.assignee = processed.assignee;
+  if (processed.status !== undefined) updates.status = processed.status;
+  if (processed.progress !== undefined) updates.progress = processed.progress;
+  if ('startDate' in processed) updates.startDate = processed.startDate;
+  if ('dueDate' in processed) updates.dueDate = processed.dueDate;
+  if ('parentId' in processed) updates.parentId = processed.parentId;
 
   const [row] = await db.update(tasks).set(updates).where(eq(tasks.id, id)).returning();
   revalidatePath('/');

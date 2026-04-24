@@ -145,3 +145,32 @@ describe('getDescendantCount (SPEC D-2 "모든 하위 작업 N개")', () => {
     expect(await getDescendantCount(parent.id)).toBe(3); // C + G + GG
   });
 });
+
+describe('applyProgressCompletionRule 적용 (Issue #5 Stage 2, SPEC §3 C-2)', () => {
+  it('updateTask(id, { progress: 100 }) → DB row status=done, progress=100', async () => {
+    const created = await createTask({ title: 'X' });
+    const updated = await updateTask(created.id, { progress: 100 });
+    expect(updated.progress).toBe(100);
+    expect(updated.status).toBe('done');
+  });
+
+  it('updateTask(id, { progress: 50 }) → status 건드리지 않음', async () => {
+    const created = await createTask({ title: 'X', status: 'doing' });
+    const updated = await updateTask(created.id, { progress: 50 });
+    expect(updated.progress).toBe(50);
+    expect(updated.status).toBe('doing');
+  });
+
+  it("updateTask(id, { status: 'done' }) → progress 건드리지 않음 (역방향 없음)", async () => {
+    const created = await createTask({ title: 'X', progress: 50, status: 'doing' });
+    const updated = await updateTask(created.id, { status: 'done' });
+    expect(updated.status).toBe('done');
+    expect(updated.progress).toBe(50);
+  });
+
+  it("createTask({ title: 'X', progress: 100 }) → status='done' 자동", async () => {
+    const created = await createTask({ title: 'X', progress: 100 });
+    expect(created.progress).toBe(100);
+    expect(created.status).toBe('done');
+  });
+});

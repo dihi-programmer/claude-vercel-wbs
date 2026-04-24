@@ -5,7 +5,11 @@
  * 이 단계에서 구현 (lib/validation/task.ts) 은 'not implemented' throw — 전 테스트 실패가 정상.
  */
 import { describe, it, expect } from 'vitest';
-import { validateTaskInput } from '@/lib/validation/task';
+import {
+  validateTaskInput,
+  cycleStatus,
+  applyProgressCompletionRule,
+} from '@/lib/validation/task';
 
 describe('validateTaskInput', () => {
   describe('title (B-2 필수 필드)', () => {
@@ -117,5 +121,56 @@ describe('validateTaskInput', () => {
         expect(Object.keys(result.errors).sort()).toEqual(['progress', 'status', 'title']);
       }
     });
+  });
+});
+
+describe('cycleStatus (Issue #5 Stage 1, SPEC §3 C-2)', () => {
+  it("'todo' → 'doing'", () => {
+    expect(cycleStatus('todo')).toBe('doing');
+  });
+  it("'doing' → 'done'", () => {
+    expect(cycleStatus('doing')).toBe('done');
+  });
+  it("'done' → 'todo' (순환)", () => {
+    expect(cycleStatus('done')).toBe('todo');
+  });
+});
+
+describe('applyProgressCompletionRule (Issue #5 Stage 1, SPEC §3 C-2)', () => {
+  it('progress=100, status=todo → status=done, 다른 필드 보존', () => {
+    const input = { title: 'X', progress: 100, status: 'todo', assignee: '김PM' };
+    const result = applyProgressCompletionRule(input);
+    expect(result.status).toBe('done');
+    expect(result.progress).toBe(100);
+    expect(result.title).toBe('X');
+    expect(result.assignee).toBe('김PM');
+  });
+
+  it('progress=100, status=doing → status=done', () => {
+    const result = applyProgressCompletionRule({ title: 'X', progress: 100, status: 'doing' });
+    expect(result.status).toBe('done');
+  });
+
+  it('progress=100, status=done → idempotent (그대로)', () => {
+    const result = applyProgressCompletionRule({ title: 'X', progress: 100, status: 'done' });
+    expect(result.status).toBe('done');
+    expect(result.progress).toBe(100);
+  });
+
+  it('progress=99 → status 변경 없음', () => {
+    const result = applyProgressCompletionRule({ title: 'X', progress: 99, status: 'todo' });
+    expect(result.status).toBe('todo');
+  });
+
+  it('progress=undefined → 변경 없음', () => {
+    const result = applyProgressCompletionRule({ title: 'X', status: 'doing' });
+    expect(result.status).toBe('doing');
+    expect(result.progress).toBeUndefined();
+  });
+
+  it('status=done 만 들어와도 progress 건드리지 않음 (역방향 없음)', () => {
+    const result = applyProgressCompletionRule({ title: 'X', status: 'done', progress: 50 });
+    expect(result.status).toBe('done');
+    expect(result.progress).toBe(50);
   });
 });

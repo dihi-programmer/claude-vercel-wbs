@@ -66,4 +66,35 @@ describe('<TaskFormModal />', () => {
     expect(screen.getByText(/목표 기한은 시작일/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /저장/ })).toBeDisabled();
   });
+
+  describe('진행률 ↔ 상태 자동 반영 (Stage 4, SPEC §3 C-2)', () => {
+    it('진행률 100 입력 → 상태 select 값이 "done" 으로 자동 전환', () => {
+      renderWithChakra(
+        <TaskFormModal mode="create" open onSubmit={vi.fn()} onClose={vi.fn()} />,
+      );
+      fireEvent.change(screen.getByLabelText(/제목/), { target: { value: 'X' } });
+      fireEvent.change(screen.getByLabelText(/진행률/), { target: { value: '100' } });
+      expect((screen.getByLabelText(/상태/) as HTMLSelectElement).value).toBe('done');
+    });
+
+    it('진행률 100 후 상태를 "진행 중" 으로 수동 변경 → 진행률 100 유지 (역방향 없음)', () => {
+      renderWithChakra(
+        <TaskFormModal mode="create" open onSubmit={vi.fn()} onClose={vi.fn()} />,
+      );
+      fireEvent.change(screen.getByLabelText(/제목/), { target: { value: 'X' } });
+      fireEvent.change(screen.getByLabelText(/진행률/), { target: { value: '100' } });
+      fireEvent.change(screen.getByLabelText(/상태/), { target: { value: 'doing' } });
+      expect((screen.getByLabelText(/진행률/) as HTMLInputElement).value).toBe('100');
+      expect((screen.getByLabelText(/상태/) as HTMLSelectElement).value).toBe('doing');
+    });
+
+    it('진행률 99 입력 → 상태 변경 없음 (초기 todo 유지)', () => {
+      renderWithChakra(
+        <TaskFormModal mode="create" open onSubmit={vi.fn()} onClose={vi.fn()} />,
+      );
+      fireEvent.change(screen.getByLabelText(/제목/), { target: { value: 'X' } });
+      fireEvent.change(screen.getByLabelText(/진행률/), { target: { value: '99' } });
+      expect((screen.getByLabelText(/상태/) as HTMLSelectElement).value).toBe('todo');
+    });
+  });
 });
