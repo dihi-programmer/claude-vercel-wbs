@@ -114,6 +114,95 @@ describe('<TaskList />', () => {
     });
   });
 
+  describe('기간 컬럼 + overdue (Stage 2, SPEC §1 A-2, §8 H-2)', () => {
+    it('시작일 + 목표 기한 있음 → "M/D ~ M/D" 렌더', () => {
+      const t = makeTask({
+        id: 'a',
+        title: 'X',
+        startDate: '2026-05-01',
+        dueDate: '2026-05-10',
+      });
+      renderWithChakra(
+        <TaskList tasks={[t]} onRowClick={vi.fn()} now={new Date('2026-04-01T00:00:00Z')} />,
+      );
+      expect(screen.getByTestId('task-date-range')).toHaveTextContent('5/1 ~ 5/10');
+    });
+
+    it('시작일만 있음 → "M/D ~"', () => {
+      const t = makeTask({ id: 'a', title: 'X', startDate: '2026-05-01' });
+      renderWithChakra(<TaskList tasks={[t]} onRowClick={vi.fn()} />);
+      expect(screen.getByTestId('task-date-range')).toHaveTextContent('5/1 ~');
+    });
+
+    it('목표 기한만 있음 → "~ M/D"', () => {
+      const t = makeTask({ id: 'a', title: 'X', dueDate: '2026-05-10' });
+      renderWithChakra(
+        <TaskList tasks={[t]} onRowClick={vi.fn()} now={new Date('2026-04-01T00:00:00Z')} />,
+      );
+      expect(screen.getByTestId('task-date-range')).toHaveTextContent('~ 5/10');
+    });
+
+    it('날짜 둘 다 없음 → "—"', () => {
+      const t = makeTask({ id: 'a', title: 'X' });
+      renderWithChakra(<TaskList tasks={[t]} onRowClick={vi.fn()} />);
+      expect(screen.getByTestId('task-date-range')).toHaveTextContent('—');
+    });
+
+    it('과거 목표 기한 + status=doing → "지남" 배지 + data-overdue="true"', () => {
+      const t = makeTask({
+        id: 'a',
+        title: 'X',
+        dueDate: '2026-05-01',
+        status: 'doing',
+      });
+      renderWithChakra(
+        <TaskList
+          tasks={[t]}
+          onRowClick={vi.fn()}
+          now={new Date('2026-05-10T00:00:00Z')}
+        />,
+      );
+      expect(screen.getByText('지남')).toBeInTheDocument();
+      const cell = screen.getByTestId('task-date-range').parentElement;
+      expect(cell).toHaveAttribute('data-overdue', 'true');
+    });
+
+    it('과거 목표 기한 + status=done → "지남" 배지 없음 (H-3)', () => {
+      const t = makeTask({
+        id: 'a',
+        title: 'X',
+        dueDate: '2026-05-01',
+        status: 'done',
+        progress: 100,
+      });
+      renderWithChakra(
+        <TaskList
+          tasks={[t]}
+          onRowClick={vi.fn()}
+          now={new Date('2026-05-10T00:00:00Z')}
+        />,
+      );
+      expect(screen.queryByText('지남')).toBeNull();
+    });
+
+    it('미래 목표 기한 → 경고 없음', () => {
+      const t = makeTask({
+        id: 'a',
+        title: 'X',
+        dueDate: '2026-05-20',
+        status: 'doing',
+      });
+      renderWithChakra(
+        <TaskList
+          tasks={[t]}
+          onRowClick={vi.fn()}
+          now={new Date('2026-05-10T00:00:00Z')}
+        />,
+      );
+      expect(screen.queryByText('지남')).toBeNull();
+    });
+  });
+
   describe('상태 배지 배선 (Issue #5 Stage 5, SPEC §3 C-2)', () => {
     it('onStatusCycle 없으면 배지는 한글 라벨만 읽기 전용 표시', () => {
       const t = makeTask({ id: 'x', title: 'X', status: 'todo' });

@@ -8,9 +8,10 @@ export type GanttBarProps = {
   dueDate: string | null;
   progress: number;
   range: GanttRange;
+  overdue?: boolean;
 };
 
-export function GanttBar({ startDate, dueDate, progress, range }: GanttBarProps) {
+export function GanttBar({ startDate, dueDate, progress, range, overdue = false }: GanttBarProps) {
   // SPEC §7 G-2: 시작일/목표 기한 중 하나라도 비면 막대 없이 "— 일정 없음 —" 표기.
   if (!startDate || !dueDate) {
     return (
@@ -33,9 +34,13 @@ export function GanttBar({ startDate, dueDate, progress, range }: GanttBarProps)
       borderRadius="sm"
       bg="blue.100"
       overflow="hidden"
+      // SPEC §8 H-2 간트: overdue 시 빨강 테두리.
+      borderWidth={overdue ? '2px' : '0'}
+      borderColor={overdue ? 'red.500' : 'transparent'}
       data-left-pct={String(bar.leftPct)}
       data-width-pct={String(bar.widthPct)}
       data-progress-pct={String(bar.progressPct)}
+      data-overdue={String(overdue)}
     >
       {/* 진행률 채움 — SPEC §7 G-2 "진행률만큼 진한 색, 나머지는 옅은 색" */}
       <Box

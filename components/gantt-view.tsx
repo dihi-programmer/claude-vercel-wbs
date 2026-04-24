@@ -4,6 +4,7 @@ import { Box, Flex, Text } from '@chakra-ui/react';
 import type { Task } from '@/lib/db/schema';
 import { calculateRange, getWeekMarks, type GanttRange } from '@/lib/gantt/calc';
 import { buildTaskTree, type TaskNode } from '@/lib/tasks/build-tree';
+import { isOverdue } from '@/lib/overdue/is-overdue';
 import { GanttBar } from './gantt-bar';
 
 export type GanttViewProps = {
@@ -110,6 +111,7 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
               dueDate={node.task.dueDate}
               progress={node.task.progress}
               range={range}
+              overdue={isOverdue(node.task.dueDate, node.task.status, now)}
             />
           </Box>
         ))}

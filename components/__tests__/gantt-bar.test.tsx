@@ -78,4 +78,47 @@ describe('<GanttBar />', () => {
     );
     expect(container.querySelector('[data-progress-pct]')?.getAttribute('data-progress-pct')).toBe('60');
   });
+
+  describe('overdue 표시 (Stage 3, SPEC §8 H-2 간트)', () => {
+    it('overdue=true → data-overdue="true"', () => {
+      const { container } = renderWithChakra(
+        <GanttBar
+          startDate="2026-05-01"
+          dueDate="2026-05-31"
+          progress={50}
+          range={range}
+          overdue
+        />,
+      );
+      const bar = container.querySelector('[data-overdue]');
+      expect(bar?.getAttribute('data-overdue')).toBe('true');
+    });
+
+    it('overdue 기본값(생략) → data-overdue="false"', () => {
+      const { container } = renderWithChakra(
+        <GanttBar
+          startDate="2026-05-01"
+          dueDate="2026-05-31"
+          progress={50}
+          range={range}
+        />,
+      );
+      const bar = container.querySelector('[data-overdue]');
+      expect(bar?.getAttribute('data-overdue')).toBe('false');
+    });
+
+    it('"일정 없음" 분기에서는 overdue 무관 — 텍스트만 렌더, 막대 없음', () => {
+      const { container } = renderWithChakra(
+        <GanttBar
+          startDate={null}
+          dueDate="2026-05-31"
+          progress={50}
+          range={range}
+          overdue
+        />,
+      );
+      expect(screen.getByText(/일정 없음/)).toBeInTheDocument();
+      expect(container.querySelector('[data-overdue]')).toBeNull();
+    });
+  });
 });

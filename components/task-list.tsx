@@ -1,10 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Box, Button, Flex, Stack, Text } from '@chakra-ui/react';
+import { Badge, Box, Button, Flex, Stack, Text } from '@chakra-ui/react';
 import type { Task } from '@/lib/db/schema';
 import type { TaskStatus } from '@/lib/validation/task';
 import { buildTaskTree, type TaskNode } from '@/lib/tasks/build-tree';
+import { isOverdue } from '@/lib/overdue/is-overdue';
 import { StatusBadge } from './status-badge';
 
 export type TaskListProps = {
@@ -13,7 +14,21 @@ export type TaskListProps = {
   onAddChildClick?: (task: Task) => void;
   onDeleteClick?: (task: Task) => void;
   onStatusCycle?: (task: Task) => void;
+  now?: Date;
 };
+
+function formatShortDate(iso: string): string {
+  // '2026-05-01' → '5/1' (선행 0 제거, 월/일 관용 포맷)
+  const d = new Date(`${iso}T00:00:00Z`);
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+}
+
+function formatDateRange(start: string | null, due: string | null): string {
+  if (!start && !due) return '—';
+  if (!due) return `${formatShortDate(start!)} ~`;
+  if (!start) return `~ ${formatShortDate(due)}`;
+  return `${formatShortDate(start)} ~ ${formatShortDate(due)}`;
+}
 
 function flattenVisibleNodes(nodes: TaskNode[], collapsedIds: Set<string>): TaskNode[] {
   const out: TaskNode[] = [];
@@ -27,7 +42,7 @@ function flattenVisibleNodes(nodes: TaskNode[], collapsedIds: Set<string>): Task
   return out;
 }
 
-export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick, onStatusCycle }: TaskListProps) {
+export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick, onStatusCycle, now = new Date() }: TaskListProps) {
   const tree = useMemo(() => buildTaskTree(tasks), [tasks]);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const visibleNodes = useMemo(() => flattenVisibleNodes(tree, collapsedIds), [tree, collapsedIds]);
@@ -99,6 +114,32 @@ export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick, on
                 onCycle={onStatusCycle ? () => onStatusCycle(task) : undefined}
               />
               <Text fontSize="sm" minW="12" textAlign="right">{task.progress}%</Text>
+              {(() => {
+                const overdue = isOverdue(task.dueDate, task.status, now);
+                return (
+                  <Flex
+                    gap={1}
+                    align="center"
+                    minW="36"
+                    justify="flex-end"
+                    data-overdue={String(overdue)}
+                  >
+                    <Text
+                      data-testid="task-date-range"
+                      fontSize="sm"
+                      color={overdue ? 'red.500' : 'fg.muted'}
+                      whiteSpace="nowrap"
+                    >
+                      {formatDateRange(task.startDate, task.dueDate)}
+                    </Text>
+                    {overdue && (
+                      <Badge colorPalette="red" variant="subtle" fontSize="xs">
+                        지남
+                      </Badge>
+                    )}
+                  </Flex>
+                );
+              })()}
               {onAddChildClick && (
                 <Button
                   size="xs"
