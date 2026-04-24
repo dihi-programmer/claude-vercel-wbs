@@ -113,4 +113,47 @@ describe('<TaskList />', () => {
       expect(screen.getByRole('button', { name: '작업: Orphan' })).toHaveAttribute('data-depth', '0');
     });
   });
+
+  describe('펼침/접힘 (Stage 3, SPEC §5 E-2)', () => {
+    it('접기 버튼 클릭 → ▶ 로 바뀌고 자식 숨김', () => {
+      const p = makeTask({ id: 'p', title: 'Parent' });
+      const c = makeTask({ id: 'c', parentId: 'p', title: 'Child' });
+      renderWithChakra(<TaskList tasks={[p, c]} onRowClick={vi.fn()} />);
+      fireEvent.click(screen.getByRole('button', { name: '접기' }));
+      expect(screen.queryByRole('button', { name: '작업: Child' })).toBeNull();
+      expect(screen.getByRole('button', { name: '펼치기' })).toBeInTheDocument();
+    });
+
+    it('펼치기 버튼 클릭 → ▼ 로 복원, 자식 다시 보임', () => {
+      const p = makeTask({ id: 'p', title: 'Parent' });
+      const c = makeTask({ id: 'c', parentId: 'p', title: 'Child' });
+      renderWithChakra(<TaskList tasks={[p, c]} onRowClick={vi.fn()} />);
+      fireEvent.click(screen.getByRole('button', { name: '접기' }));
+      fireEvent.click(screen.getByRole('button', { name: '펼치기' }));
+      expect(screen.getByRole('button', { name: '작업: Child' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '접기' })).toBeInTheDocument();
+    });
+
+    it('토글 클릭은 onRowClick 호출 안 됨 (stopPropagation)', () => {
+      const p = makeTask({ id: 'p', title: 'Parent' });
+      const c = makeTask({ id: 'c', parentId: 'p', title: 'Child' });
+      const onRowClick = vi.fn();
+      renderWithChakra(<TaskList tasks={[p, c]} onRowClick={onRowClick} />);
+      fireEvent.click(screen.getByRole('button', { name: '접기' }));
+      expect(onRowClick).not.toHaveBeenCalled();
+    });
+
+    it('조부 접으면 자식과 손자 모두 사라짐', () => {
+      const p = makeTask({ id: 'p', title: 'Parent' });
+      const c = makeTask({ id: 'c', parentId: 'p', title: 'Child' });
+      const g = makeTask({ id: 'g', parentId: 'c', title: 'Grandchild' });
+      renderWithChakra(<TaskList tasks={[p, c, g]} onRowClick={vi.fn()} />);
+      // Parent 접기 버튼 (여러 개 중 Parent 의 것)
+      const parentRow = screen.getByRole('button', { name: '작업: Parent' });
+      const toggleInParentRow = parentRow.querySelector('button[aria-label="접기"]') as HTMLElement;
+      fireEvent.click(toggleInParentRow);
+      expect(screen.queryByRole('button', { name: '작업: Child' })).toBeNull();
+      expect(screen.queryByRole('button', { name: '작업: Grandchild' })).toBeNull();
+    });
+  });
 });
