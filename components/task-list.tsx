@@ -6,6 +6,8 @@ import type { Task } from '@/lib/db/schema';
 export type TaskListProps = {
   tasks: Task[];
   onRowClick: (task: Task) => void;
+  onAddChildClick?: (task: Task) => void;
+  onDeleteClick?: (task: Task) => void;
 };
 
 export function TaskList({ tasks, onRowClick }: TaskListProps) {

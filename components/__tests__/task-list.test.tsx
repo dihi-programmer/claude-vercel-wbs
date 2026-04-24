@@ -28,4 +28,44 @@ describe('<TaskList />', () => {
     fireEvent.click(screen.getByText('Beta'));
     expect(onRowClick).toHaveBeenCalledWith(t2);
   });
+
+  it('onAddChildClick props 제공 → "+ 하위" 버튼 렌더 (SPEC B-1)', () => {
+    const t = makeTask({ id: 'x', title: 'Parent' });
+    renderWithChakra(
+      <TaskList tasks={[t]} onRowClick={vi.fn()} onAddChildClick={vi.fn()} />,
+    );
+    expect(screen.getByRole('button', { name: /하위/ })).toBeInTheDocument();
+  });
+
+  it('"+ 하위" 클릭 → onAddChildClick 만 호출 (onRowClick 은 호출 안 됨)', () => {
+    const t = makeTask({ id: 'x', title: 'Parent' });
+    const onRowClick = vi.fn();
+    const onAddChildClick = vi.fn();
+    renderWithChakra(
+      <TaskList tasks={[t]} onRowClick={onRowClick} onAddChildClick={onAddChildClick} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /하위/ }));
+    expect(onAddChildClick).toHaveBeenCalledWith(t);
+    expect(onRowClick).not.toHaveBeenCalled();
+  });
+
+  it('onDeleteClick props 제공 → "삭제" 버튼 렌더 (SPEC D-1)', () => {
+    const t = makeTask({ id: 'x', title: 'X' });
+    renderWithChakra(
+      <TaskList tasks={[t]} onRowClick={vi.fn()} onDeleteClick={vi.fn()} />,
+    );
+    expect(screen.getByRole('button', { name: /삭제/ })).toBeInTheDocument();
+  });
+
+  it('"삭제" 클릭 → onDeleteClick 만 호출 (onRowClick 은 호출 안 됨)', () => {
+    const t = makeTask({ id: 'x', title: 'X' });
+    const onRowClick = vi.fn();
+    const onDeleteClick = vi.fn();
+    renderWithChakra(
+      <TaskList tasks={[t]} onRowClick={onRowClick} onDeleteClick={onDeleteClick} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /삭제/ }));
+    expect(onDeleteClick).toHaveBeenCalledWith(t);
+    expect(onRowClick).not.toHaveBeenCalled();
+  });
 });
