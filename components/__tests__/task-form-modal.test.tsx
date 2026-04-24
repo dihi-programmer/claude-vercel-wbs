@@ -3,7 +3,7 @@
  * 근거: SPEC.md §2 B (생성), §3 C (수정).
  */
 import { describe, it, expect, vi } from 'vitest';
-import { screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { TaskFormModal } from '../task-form-modal';
 import { renderWithChakra } from './helpers';
 
@@ -56,13 +56,27 @@ describe('<TaskFormModal />', () => {
     expect(screen.getByLabelText(/담당자/)).toHaveValue('김PM');
   });
 
-  it('ESC 키 → onClose 호출 (#25 Chakra Dialog 전환)', () => {
+  it('Dialog 가 Portal 을 통해 render container 밖에 렌더됨 (#25 진짜 팝업)', () => {
+    const { container } = renderWithChakra(
+      <TaskFormModal mode="create" open onSubmit={vi.fn()} onClose={vi.fn()} />,
+    );
+    // 인라인 Box 구현이면 container 안에 dialog 가 있음.
+    // Chakra Dialog + Portal 이면 document.body 에 붙어 container 밖에 있음.
+    const dialogInContainer = container.querySelector('[role="dialog"]');
+    const dialogInDocument = screen.getByRole('dialog');
+    expect(dialogInDocument).toBeInTheDocument();
+    expect(dialogInContainer).toBeNull();
+  });
+
+  it('Dialog "취소" 버튼 클릭 → onClose 호출 (ActionTrigger)', async () => {
     const onClose = vi.fn();
     renderWithChakra(
       <TaskFormModal mode="create" open onSubmit={vi.fn()} onClose={onClose} />,
     );
-    fireEvent.keyDown(document.body, { key: 'Escape', code: 'Escape' });
-    expect(onClose).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: '취소' }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
   });
 
   it('startDate > dueDate → 에러 메시지 노출, 저장 버튼 비활성 (SPEC B-2)', () => {
