@@ -24,6 +24,9 @@ coverage/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+# Playwright MCP (로컬 스크린샷·스냅샷 캐시)
+.playwright-mcp/
+verification-*.png
 
 # ── Logs ──────────────────────────────────────────────────
 npm-debug.log*
