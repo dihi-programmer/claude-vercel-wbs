@@ -9,6 +9,7 @@ import { createTask, updateTask, deleteTask, getDescendantCount } from '@/app/ac
 import { TaskList } from './task-list';
 import { TaskFormModal } from './task-form-modal';
 import { DeleteConfirmDialog } from './delete-confirm-dialog';
+import { CsvToolbar } from './csv-toolbar';
 
 type ModalState =
   | { kind: 'none' }
@@ -78,11 +79,14 @@ export function TasksPageClient({ initialTasks }: { initialTasks: Task[] }) {
 
   return (
     <Box p={6} maxW="5xl" mx="auto">
-      <Flex justify="space-between" align="center" mb={6}>
+      <Flex justify="space-between" align="center" mb={6} gap={4}>
         <Heading size="lg">WBS</Heading>
-        <Button onClick={() => setModal({ kind: 'create', parentId: null })}>
-          + 작업 추가
-        </Button>
+        <Flex gap={2} align="center">
+          <CsvToolbar existingTasks={initialTasks} />
+          <Button onClick={() => setModal({ kind: 'create', parentId: null })}>
+            + 작업 추가
+          </Button>
+        </Flex>
       </Flex>
 
       <TaskList
