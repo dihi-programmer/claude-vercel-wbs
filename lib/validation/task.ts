@@ -13,6 +13,13 @@ export type ValidationResult =
   | { valid: true }
   | { valid: false; errors: Record<string, string> };
 
+export class TaskValidationError extends Error {
+  constructor(public readonly errors: Record<string, string>) {
+    super(`검증 실패: ${Object.keys(errors).join(', ')}`);
+    this.name = 'TaskValidationError';
+  }
+}
+
 const ALLOWED_STATUS = ['todo', 'doing', 'done'] as const;
 
 export function validateTaskInput(input: TaskInput): ValidationResult {
