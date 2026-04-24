@@ -37,10 +37,4 @@ jobs:
         run: npm test
 
       - name: Build
-        env:
-          # Next 14 가 "collecting page data" 단계에서 페이지 모듈을 import 하면서
-          # lib/db/index.ts 의 top-level throw 가 발동해 빌드가 깨짐.
-          # 이 단계에서 실제 쿼리는 돌지 않으므로 더미 URL 로 충분.
-          # 근본 해결(lazy db connection) 은 별도 chore 이슈에서 진행.
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
         run: npm run build
