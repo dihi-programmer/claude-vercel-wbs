@@ -1,16 +1,11 @@
-'use client';
+import { asc } from 'drizzle-orm';
+import { db } from '@/lib/db';
+import { tasks } from '@/lib/db/schema';
+import { TasksPageClient } from '@/components/tasks-page-client';
 
-import { Box, Heading, Text, VStack } from '@chakra-ui/react';
+export const dynamic = 'force-dynamic';
 
-export default function Home() {
-  return (
-    <Box minH="100vh" display="flex" alignItems="center" justifyContent="center" p={8}>
-      <VStack gap={3} textAlign="center">
-        <Heading size="2xl">WBS 부트스트랩 완료 ✅</Heading>
-        <Text color="fg.muted">
-          Next.js 14 · Chakra UI v3 · Supabase · Drizzle ORM 클라이언트가 배선되었습니다.
-        </Text>
-      </VStack>
-    </Box>
-  );
+export default async function HomePage() {
+  const allTasks = await db.select().from(tasks).orderBy(asc(tasks.createdAt));
+  return <TasksPageClient initialTasks={allTasks} />;
 }

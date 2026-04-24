@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Flex, Stack, Text } from '@chakra-ui/react';
+import { Box, Button, Flex, Stack, Text } from '@chakra-ui/react';
 import type { Task } from '@/lib/db/schema';
 
 export type TaskListProps = {
@@ -10,7 +10,7 @@ export type TaskListProps = {
   onDeleteClick?: (task: Task) => void;
 };
 
-export function TaskList({ tasks, onRowClick }: TaskListProps) {
+export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick }: TaskListProps) {
   if (tasks.length === 0) {
     return (
       <Box py={10} textAlign="center">
@@ -25,6 +25,7 @@ export function TaskList({ tasks, onRowClick }: TaskListProps) {
         <Box
           key={task.id}
           role="button"
+          aria-label={`작업: ${task.title}`}
           tabIndex={0}
           onClick={() => onRowClick(task)}
           onKeyDown={(e) => {
@@ -44,6 +45,31 @@ export function TaskList({ tasks, onRowClick }: TaskListProps) {
             <Text color="fg.muted" minW="20">{task.assignee ?? '—'}</Text>
             <Text fontSize="sm">{task.status}</Text>
             <Text fontSize="sm" minW="12" textAlign="right">{task.progress}%</Text>
+            {onAddChildClick && (
+              <Button
+                size="xs"
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddChildClick(task);
+                }}
+              >
+                + 하위
+              </Button>
+            )}
+            {onDeleteClick && (
+              <Button
+                size="xs"
+                variant="ghost"
+                colorPalette="red"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteClick(task);
+                }}
+              >
+                삭제
+              </Button>
+            )}
           </Flex>
         </Box>
       ))}
