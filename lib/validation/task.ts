@@ -20,6 +20,16 @@ export class TaskValidationError extends Error {
   }
 }
 
+export type TaskStatus = 'todo' | 'doing' | 'done';
+
+export function cycleStatus(_current: TaskStatus): TaskStatus {
+  throw new Error('not implemented');
+}
+
+export function applyProgressCompletionRule(_input: TaskInput): TaskInput {
+  throw new Error('not implemented');
+}
+
 const ALLOWED_STATUS = ['todo', 'doing', 'done'] as const;
 
 export function validateTaskInput(input: TaskInput): ValidationResult {
