@@ -56,6 +56,15 @@ describe('<TaskFormModal />', () => {
     expect(screen.getByLabelText(/담당자/)).toHaveValue('김PM');
   });
 
+  it('ESC 키 → onClose 호출 (#25 Chakra Dialog 전환)', () => {
+    const onClose = vi.fn();
+    renderWithChakra(
+      <TaskFormModal mode="create" open onSubmit={vi.fn()} onClose={onClose} />,
+    );
+    fireEvent.keyDown(document.body, { key: 'Escape', code: 'Escape' });
+    expect(onClose).toHaveBeenCalled();
+  });
+
   it('startDate > dueDate → 에러 메시지 노출, 저장 버튼 비활성 (SPEC B-2)', () => {
     renderWithChakra(
       <TaskFormModal mode="create" open onSubmit={vi.fn()} onClose={vi.fn()} />,
