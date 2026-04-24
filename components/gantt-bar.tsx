@@ -1,6 +1,7 @@
 'use client';
 
-import type { GanttRange } from '@/lib/gantt/calc';
+import { Box, Text } from '@chakra-ui/react';
+import { calculateBar, type GanttRange } from '@/lib/gantt/calc';
 
 export type GanttBarProps = {
   startDate: string | null;
@@ -9,7 +10,39 @@ export type GanttBarProps = {
   range: GanttRange;
 };
 
-export function GanttBar(_props: GanttBarProps) {
-  // RED 스텁 — GREEN 단계에서 실제 막대 렌더링으로 교체.
-  return null;
+export function GanttBar({ startDate, dueDate, progress, range }: GanttBarProps) {
+  // SPEC §7 G-2: 시작일/목표 기한 중 하나라도 비면 막대 없이 "— 일정 없음 —" 표기.
+  if (!startDate || !dueDate) {
+    return (
+      <Text fontSize="sm" color="fg.muted" textAlign="center">
+        — 일정 없음 —
+      </Text>
+    );
+  }
+
+  const bar = calculateBar(startDate, dueDate, progress, range);
+
+  return (
+    <Box
+      position="absolute"
+      top="50%"
+      transform="translateY(-50%)"
+      left={`${bar.leftPct}%`}
+      width={`${bar.widthPct}%`}
+      height="20px"
+      borderRadius="sm"
+      bg="blue.100"
+      overflow="hidden"
+      data-left-pct={String(bar.leftPct)}
+      data-width-pct={String(bar.widthPct)}
+      data-progress-pct={String(bar.progressPct)}
+    >
+      {/* 진행률 채움 — SPEC §7 G-2 "진행률만큼 진한 색, 나머지는 옅은 색" */}
+      <Box
+        width={`${bar.progressPct}%`}
+        height="100%"
+        bg="blue.500"
+      />
+    </Box>
+  );
 }
