@@ -3,7 +3,7 @@
  * 근거: SPEC.md §4 D-2.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { DeleteConfirmDialog } from '../delete-confirm-dialog';
 import { renderWithChakra } from './helpers';
 
@@ -22,15 +22,28 @@ describe('<DeleteConfirmDialog />', () => {
     expect(screen.getByText(/하위 작업 3개/)).toBeInTheDocument();
   });
 
-  it('확인 클릭 → onConfirm, 취소 클릭 → onCancel', () => {
+  it('확인 클릭 → onConfirm, 취소 클릭 → onCancel', async () => {
     const onConfirm = vi.fn();
     const onCancel = vi.fn();
     renderWithChakra(
       <DeleteConfirmDialog open childCount={0} onConfirm={onConfirm} onCancel={onCancel} />,
     );
     fireEvent.click(screen.getByRole('button', { name: '확인' }));
+    await waitFor(() => {
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
     fireEvent.click(screen.getByRole('button', { name: '취소' }));
-    expect(onConfirm).toHaveBeenCalledTimes(1);
-    expect(onCancel).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(onCancel).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('Dialog 가 Portal 을 통해 render container 밖에 렌더됨 (#25)', () => {
+    const { container } = renderWithChakra(
+      <DeleteConfirmDialog open childCount={0} onConfirm={vi.fn()} onCancel={vi.fn()} />,
+    );
+    // role="alertdialog" (삭제 확인용)
+    expect(container.querySelector('[role="alertdialog"]')).toBeNull();
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
   });
 });

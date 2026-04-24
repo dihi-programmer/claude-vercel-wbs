@@ -119,39 +119,34 @@ export function TasksPageClient({ initialTasks }: { initialTasks: Task[] }) {
         <GanttView tasks={initialTasks} />
       )}
 
+      {/* Dialog 들은 Portal 로 body 에 렌더되므로 Box 래퍼 불필요 (#25). */}
       {modal.kind === 'create' && (
-        <Box mt={6}>
-          <TaskFormModal
-            mode="create"
-            open
-            onSubmit={handleCreateSubmit}
-            onClose={close}
-          />
-        </Box>
+        <TaskFormModal
+          mode="create"
+          open
+          onSubmit={handleCreateSubmit}
+          onClose={close}
+        />
       )}
 
       {modal.kind === 'edit' && (
-        <Box mt={6}>
-          <TaskFormModal
-            key={modal.task.id}
-            mode="edit"
-            open
-            initialValue={modal.task}
-            onSubmit={handleEditSubmit}
-            onClose={close}
-          />
-        </Box>
+        <TaskFormModal
+          key={modal.task.id}
+          mode="edit"
+          open
+          initialValue={modal.task}
+          onSubmit={handleEditSubmit}
+          onClose={close}
+        />
       )}
 
       {modal.kind === 'delete' && (
-        <Box mt={6}>
-          <DeleteConfirmDialog
-            open
-            childCount={modal.childCount}
-            onConfirm={handleDeleteConfirm}
-            onCancel={close}
-          />
-        </Box>
+        <DeleteConfirmDialog
+          open
+          childCount={modal.childCount}
+          onConfirm={handleDeleteConfirm}
+          onCancel={close}
+        />
       )}
     </Box>
   );
