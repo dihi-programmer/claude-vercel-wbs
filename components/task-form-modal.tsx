@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Box, Button, Heading, Input, Stack, Text, Textarea } from '@chakra-ui/react';
 import type { TaskInput } from '@/lib/validation/task';
-import { validateTaskInput } from '@/lib/validation/task';
+import { validateTaskInput, applyProgressCompletionRule } from '@/lib/validation/task';
 import type { Task } from '@/lib/db/schema';
 
 export type TaskFormModalProps = {
@@ -114,7 +114,20 @@ export function TaskFormModal({ mode, open, initialValue, onSubmit, onClose }: T
             min={0}
             max={100}
             value={values.progress}
-            onChange={(e) => setValues({ ...values, progress: Number(e.target.value) })}
+            onChange={(e) => {
+              const nextProgress = Number(e.target.value);
+              // SPEC §3 C-2: progress === 100 → status='done' 자동 승격.
+              // 규칙을 순수 함수로 재사용해 UI / 서버에서 동일 동작.
+              const processed = applyProgressCompletionRule({
+                progress: nextProgress,
+                status: values.status,
+              });
+              setValues({
+                ...values,
+                progress: nextProgress,
+                status: (processed.status as FormValues['status']) ?? values.status,
+              });
+            }}
           />
           {errors.progress && <Text color="red.500" fontSize="sm">{errors.progress}</Text>}
         </Box>
