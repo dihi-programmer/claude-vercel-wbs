@@ -1,0 +1,37 @@
+name: CI
+
+# PR·main 푸시마다 lint → typecheck → build 를 돌려 회귀를 잡습니다.
+# DB 접속이 필요한 마이그레이션·E2E 는 별도 워크플로우(db-migrate.yml 등)가 담당.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    name: lint · typecheck · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
