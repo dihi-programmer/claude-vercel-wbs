@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Box, Button, Flex, Stack, Text } from '@chakra-ui/react';
 import type { Task } from '@/lib/db/schema';
 import { buildTaskTree, type TaskNode } from '@/lib/tasks/build-tree';
@@ -12,20 +12,33 @@ export type TaskListProps = {
   onDeleteClick?: (task: Task) => void;
 };
 
-function flattenTree(nodes: TaskNode[]): TaskNode[] {
+function flattenVisibleNodes(nodes: TaskNode[], collapsedIds: Set<string>): TaskNode[] {
   const out: TaskNode[] = [];
   const walk = (n: TaskNode): void => {
     out.push(n);
-    for (const child of n.children) walk(child);
+    if (!collapsedIds.has(n.task.id)) {
+      for (const child of n.children) walk(child);
+    }
   };
   for (const n of nodes) walk(n);
   return out;
 }
 
 export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick }: TaskListProps) {
-  const flatNodes = useMemo(() => flattenTree(buildTaskTree(tasks)), [tasks]);
+  const tree = useMemo(() => buildTaskTree(tasks), [tasks]);
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
+  const visibleNodes = useMemo(() => flattenVisibleNodes(tree, collapsedIds), [tree, collapsedIds]);
 
-  if (flatNodes.length === 0) {
+  const toggleCollapsed = (id: string): void => {
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  if (tree.length === 0) {
     return (
       <Box py={10} textAlign="center">
         <Text color="fg.muted">아직 작업이 없습니다. 첫 작업을 추가해 시작하세요</Text>
@@ -35,9 +48,10 @@ export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick }: 
 
   return (
     <Stack gap={2}>
-      {flatNodes.map((node) => {
+      {visibleNodes.map((node) => {
         const { task, depth, children } = node;
         const hasChildren = children.length > 0;
+        const isCollapsed = collapsedIds.has(task.id);
         return (
           <Box
             key={task.id}
@@ -60,7 +74,21 @@ export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick }: 
             _hover={{ bg: 'bg.subtle' }}
           >
             <Flex gap={4} align="center">
-              <Box minW={4}>{hasChildren && <Text as="span">▼</Text>}</Box>
+              <Box minW={4}>
+                {hasChildren && (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    aria-label={isCollapsed ? '펼치기' : '접기'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleCollapsed(task.id);
+                    }}
+                  >
+                    {isCollapsed ? '▶' : '▼'}
+                  </Button>
+                )}
+              </Box>
               <Text flex="1" fontWeight="medium">{task.title}</Text>
               <Text color="fg.muted" minW="20">{task.assignee ?? '—'}</Text>
               <Text fontSize="sm">{task.status}</Text>
