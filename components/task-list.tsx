@@ -72,6 +72,41 @@ export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick, on
 
   return (
     <Stack gap={2}>
+      {/* 컬럼 헤더 (SPEC §1 A-4) — 작업 행과 동일 컬럼 폭/구조 */}
+      <Box
+        data-testid="task-list-header"
+        p={3}
+        pl="12px"
+        borderTopWidth="1px"
+        borderBottomWidth="1px"
+        color="fg.muted"
+        fontWeight="medium"
+        fontSize="sm"
+      >
+        <Flex gap={4} align="center">
+          <Box w={7} flexShrink={0} />
+          <Text flex="1">제목</Text>
+          <Text minW="20">담당자</Text>
+          <Box minW="20" display="flex" justifyContent="center">
+            <Text>상태</Text>
+          </Box>
+          <Text minW="12" textAlign="right">진행률</Text>
+          <Flex minW="36" justify="flex-end">
+            <Text>기간</Text>
+          </Flex>
+          {/* 행의 + 하위 / 삭제 버튼 자리 — 헤더는 같은 폭만 차지하고 시각적 비표시 */}
+          {onAddChildClick && (
+            <Button size="xs" variant="ghost" visibility="hidden" aria-hidden tabIndex={-1}>
+              + 하위
+            </Button>
+          )}
+          {onDeleteClick && (
+            <Button size="xs" variant="ghost" visibility="hidden" aria-hidden tabIndex={-1}>
+              삭제
+            </Button>
+          )}
+        </Flex>
+      </Box>
       {visibleNodes.map((node) => {
         const { task, depth, children } = node;
         const hasChildren = children.length > 0;
@@ -129,10 +164,12 @@ export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick, on
               </Box>
               <Text flex="1" fontWeight="medium">{task.title}</Text>
               <Text color="fg.muted" minW="20">{task.assignee ?? '—'}</Text>
-              <StatusBadge
-                status={task.status as TaskStatus}
-                onCycle={onStatusCycle ? () => onStatusCycle(task) : undefined}
-              />
+              <Box minW="20" display="flex" justifyContent="center">
+                <StatusBadge
+                  status={task.status as TaskStatus}
+                  onCycle={onStatusCycle ? () => onStatusCycle(task) : undefined}
+                />
+              </Box>
               <Text fontSize="sm" minW="12" textAlign="right">{task.progress}%</Text>
               {(() => {
                 const overdue = isOverdue(task.dueDate, task.status, now);

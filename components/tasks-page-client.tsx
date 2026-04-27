@@ -100,10 +100,10 @@ export function TasksPageClient({ initialTasks }: { initialTasks: Task[] }) {
               간트
             </Button>
           </Flex>
-          <CsvToolbar existingTasks={initialTasks} />
           <Button onClick={() => setModal({ kind: 'create', parentId: null })}>
             + 작업 추가
           </Button>
+          <CsvToolbar existingTasks={initialTasks} />
         </Flex>
       </Flex>
 

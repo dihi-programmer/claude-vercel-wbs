@@ -81,4 +81,13 @@ describe('<TasksPageClient /> 뷰 토글 (Stage 4)', () => {
     expect(screen.getByRole('button', { name: 'CSV 내보내기' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'CSV 불러오기' })).toBeInTheDocument();
   });
+
+  it('상단 버튼 순서: 목록 → 간트 → + 작업 추가 → CSV 내보내기 → CSV 불러오기 (#33 SPEC §1 A-4)', () => {
+    const { container } = renderWithChakra(<TasksPageClient initialTasks={[]} />);
+    const labels = ['목록', '간트', '+ 작업 추가', 'CSV 내보내기', 'CSV 불러오기'];
+    const buttons = Array.from(container.querySelectorAll('button')).filter((b) =>
+      labels.includes(b.textContent?.trim() ?? ''),
+    );
+    expect(buttons.map((b) => b.textContent?.trim())).toEqual(labels);
+  });
 });
