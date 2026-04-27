@@ -72,6 +72,25 @@ export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick, on
 
   return (
     <Stack gap={2}>
+      {/* 컬럼 헤더 (SPEC §1 A-4) — 작업 행과 동일 컬럼 폭 */}
+      <Box
+        data-testid="task-list-header"
+        p={3}
+        pl="12px"
+        borderBottomWidth="1px"
+        color="fg.muted"
+        fontWeight="medium"
+        fontSize="sm"
+      >
+        <Flex gap={4} align="center">
+          <Box w={7} flexShrink={0} />
+          <Text flex="1">제목</Text>
+          <Text minW="20">담당자</Text>
+          <Text minW="16" textAlign="center">상태</Text>
+          <Text minW="12" textAlign="right">진행률</Text>
+          <Text minW="36" textAlign="right">기간</Text>
+        </Flex>
+      </Box>
       {visibleNodes.map((node) => {
         const { task, depth, children } = node;
         const hasChildren = children.length > 0;
