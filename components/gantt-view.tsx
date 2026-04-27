@@ -78,14 +78,18 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
     ((startOfDayUtc(now).getTime() - range.epoch.getTime()) / ONE_DAY_MS) * ppd;
 
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  // 마지막 "today 중앙 정렬" 을 마친 ppd 값. 모드 변경(또는 마운트) 시에만
+  // 이 값과 현재 ppd 가 다름 → 정렬 사이클 진입. onScroll 로 인한 range
+  // 확장 (epoch 이동) 만으로는 재정렬되지 않도록 가드.
+  const lastCenteredPpdRef = useRef<number | null>(null);
 
-  // 마운트 시 + 모드 변경 시 오늘을 viewport 중심으로 정렬.
-  // 모드 토글은 "오늘 기준 줌" — 직전 중심 날짜를 유지하지 않음.
+  // 마운트 시 + 모드 변경 시 오늘을 viewport 중심으로 정렬 ("오늘 기준 줌").
   // 컨텐츠 폭이 viewport 보다 좁아 today 를 중앙에 둘 수 없으면
   // 부족한 만큼 양방향으로 자동 확장한 뒤 다음 사이클에서 scrollLeft 설정.
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
+    if (lastCenteredPpdRef.current === ppd) return; // 스크롤 확장 → 재정렬 차단
     const wanted = todayPx - el.clientWidth / 2;
     const contentWidth = range.totalDays * ppd;
     const overflowLeft = Math.max(0, -wanted);
@@ -101,9 +105,11 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
         next = extendRange(next, 'future', days).range;
       }
       setRange(next);
+      // lastCenteredPpdRef 는 그대로 두어 다음 사이클에서 정렬 계속.
       return;
     }
     el.scrollLeft = wanted;
+    lastCenteredPpdRef.current = ppd; // 정렬 완료 — 이 ppd 에서 더는 재정렬 없음
   }, [ppd, todayPx, range]);
 
   if (tasks.length === 0) {
@@ -145,13 +151,18 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
         })}
       </Box>
 
-      {/* 우측: 가로 스크롤 컨테이너 */}
+      {/* 우측: 가로 스크롤 컨테이너 (스크롤바 시각적 숨김) */}
       <Box
         ref={scrollerRef}
         flex="1"
         minW="0"
         overflowX="auto"
         position="relative"
+        css={{
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+        }}
         data-mode={mode}
         data-px-per-day={String(ppd)}
         data-epoch-iso={range.epoch.toISOString()}
