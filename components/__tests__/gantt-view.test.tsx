@@ -277,15 +277,15 @@ describe('<GanttView />', () => {
       expect(screen.getByText('진행률')).toBeInTheDocument();
     });
 
-    it("헤더와 작업 행 모두 data-row-height-px=\"52\" (목록 행과 시각적 일치)", () => {
+    it("헤더와 작업 행 모두 data-row-height-px=\"58\" (목록 행과 시각적 일치)", () => {
       const t = makeTask({ id: 'a', title: 'X' });
       const { container } = renderWithChakra(<GanttView tasks={[t]} />);
       const heights = Array.from(container.querySelectorAll('[data-row-height-px]')).map((el) =>
         el.getAttribute('data-row-height-px'),
       );
-      // 좌측 헤더 + 좌측 행 + 우측 헤더 + 우측 행 = 4 elements 모두 "52"
+      // 좌측 헤더 + 좌측 행 + 우측 헤더 + 우측 행 = 4 elements 모두 "58"
       expect(heights.length).toBeGreaterThanOrEqual(4);
-      expect(heights.every((h) => h === '52')).toBe(true);
+      expect(heights.every((h) => h === '58')).toBe(true);
     });
   });
 });

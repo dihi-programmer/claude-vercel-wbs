@@ -21,8 +21,8 @@ export type GanttViewProps = {
 };
 
 const LEFT_COL_WIDTH = '240px';
-const ROW_HEIGHT = '52px';
-const ROW_HEIGHT_PX = '52';
+const ROW_HEIGHT = '58px';
+const ROW_HEIGHT_PX = '58';
 const INITIAL_PAD_DAYS = 90;
 const EDGE_THRESHOLD_PX = 200;
 const EXTEND_DAYS = 60;
