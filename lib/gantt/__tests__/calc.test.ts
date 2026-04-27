@@ -9,6 +9,7 @@ import {
   pxPerDay,
   calculateBarPx,
   getDateMarks,
+  extendRange,
   LABEL_GAP_PX,
   type GanttRange,
   type GanttRangePx,
@@ -207,5 +208,26 @@ describe('getDateMarks (#31 — 모드별 라벨)', () => {
       '2026-06-01',
     ]);
     expect(marks.map((m) => m.label)).toEqual(['5월', '6월']);
+  });
+});
+
+describe('extendRange (#31 — 무한스크롤 동적 확장)', () => {
+  const base: GanttRangePx = {
+    epoch: new Date('2026-04-24T00:00:00Z'),
+    totalDays: 90,
+  };
+
+  it("'past' 60일 → epoch 가 60일 뒤로, totalDays += 60, deltaDaysAtStart=60", () => {
+    const out = extendRange(base, 'past', 60);
+    expect(out.range.epoch.toISOString().slice(0, 10)).toBe('2026-02-23');
+    expect(out.range.totalDays).toBe(150);
+    expect(out.deltaDaysAtStart).toBe(60);
+  });
+
+  it("'future' 60일 → epoch 동일, totalDays += 60, deltaDaysAtStart=0", () => {
+    const out = extendRange(base, 'future', 60);
+    expect(out.range.epoch.toISOString().slice(0, 10)).toBe('2026-04-24');
+    expect(out.range.totalDays).toBe(150);
+    expect(out.deltaDaysAtStart).toBe(0);
   });
 });
