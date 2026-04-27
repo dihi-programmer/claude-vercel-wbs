@@ -74,15 +74,28 @@ export function calculateBarPx(
   };
 }
 
-function formatMD(d: Date): string {
-  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+function yy(year: number): string {
+  return String(year % 100).padStart(2, '0');
 }
 
-function formatMonthLabel(d: Date): string {
-  return `${d.getUTCMonth() + 1}월`;
+function formatMD(d: Date, currentYear: number): string {
+  const m = d.getUTCMonth() + 1;
+  const day = d.getUTCDate();
+  const y = d.getUTCFullYear();
+  return y === currentYear ? `${m}/${day}` : `${yy(y)}/${m}/${day}`;
 }
 
-export function getDateMarks(range: GanttRangePx, mode: GanttMode): GanttMark[] {
+function formatMonthLabel(d: Date, currentYear: number): string {
+  const m = d.getUTCMonth() + 1;
+  const y = d.getUTCFullYear();
+  return y === currentYear ? `${m}월` : `${yy(y)}/${m}월`;
+}
+
+export function getDateMarks(
+  range: GanttRangePx,
+  mode: GanttMode,
+  currentYear: number,
+): GanttMark[] {
   const ppd = pxPerDay(mode);
   const marks: GanttMark[] = [];
   const epoch = startOfDayUtc(range.epoch);
@@ -91,7 +104,7 @@ export function getDateMarks(range: GanttRangePx, mode: GanttMode): GanttMark[] 
   if (mode === 'day') {
     for (let i = 0; i < range.totalDays; i++) {
       const d = addDays(epoch, i);
-      marks.push({ date: d, leftPx: i * ppd, label: formatMD(d) });
+      marks.push({ date: d, leftPx: i * ppd, label: formatMD(d, currentYear) });
     }
     return marks;
   }
@@ -102,7 +115,7 @@ export function getDateMarks(range: GanttRangePx, mode: GanttMode): GanttMark[] 
       marks.push({
         date: current,
         leftPx: daysBetween(epoch, current) * ppd,
-        label: formatMD(current),
+        label: formatMD(current, currentYear),
       });
       current = addDays(current, 7);
     }
@@ -118,7 +131,7 @@ export function getDateMarks(range: GanttRangePx, mode: GanttMode): GanttMark[] 
     marks.push({
       date: current,
       leftPx: daysBetween(epoch, current) * ppd,
-      label: formatMonthLabel(current),
+      label: formatMonthLabel(current, currentYear),
     });
     current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, 1));
   }

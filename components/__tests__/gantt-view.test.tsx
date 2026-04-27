@@ -190,6 +190,29 @@ describe('<GanttView />', () => {
       expect(marks.length).toBe(totalDays);
     });
 
+    it('"오늘" 버튼 클릭 → scrollLeft = todayPx - clientWidth/2', () => {
+      const t = makeTask({
+        id: 'a',
+        title: 'X',
+        startDate: '2026-05-01',
+        dueDate: '2026-05-31',
+      });
+      const now = new Date('2026-05-14T00:00:00Z');
+      const { container } = renderWithChakra(<GanttView tasks={[t]} now={now} />);
+      const scroller = container.querySelector('[data-mode]') as HTMLElement;
+      // 사용자가 임의 위치로 스크롤한 상황 시뮬레이션
+      Object.defineProperty(scroller, 'scrollLeft', {
+        configurable: true,
+        writable: true,
+        value: 9999,
+      });
+      fireEvent.click(screen.getByRole('button', { name: '오늘' }));
+      const todayPx = Number(
+        container.querySelector('[data-testid="today-line"]')!.getAttribute('data-today-px'),
+      );
+      expect(scroller.scrollLeft).toBeCloseTo(todayPx - scroller.clientWidth / 2, 1);
+    });
+
     it('모드 토글 시 오늘이 viewport 중앙으로 자동 스크롤 (#31 요청 사항)', () => {
       const t = makeTask({
         id: 'a',

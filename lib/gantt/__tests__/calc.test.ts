@@ -67,7 +67,7 @@ describe('getDateMarks (#31 — 모드별 라벨)', () => {
   };
 
   it("'day' 모드 → 매일 mark (totalDays 개)", () => {
-    const marks = getDateMarks(range, 'day');
+    const marks = getDateMarks(range, 'day', 2026);
     expect(marks).toHaveLength(30);
     expect(marks[0].date.toISOString().slice(0, 10)).toBe('2026-04-24');
     expect(marks[0].leftPx).toBe(0);
@@ -78,7 +78,7 @@ describe('getDateMarks (#31 — 모드별 라벨)', () => {
   it("'week' 모드 → 범위 내 월요일만 mark", () => {
     // epoch=4/24 Fri, totalDays=30 → 4/24 ~ 5/23 inclusive
     // 월요일: 4/27, 5/4, 5/11, 5/18
-    const marks = getDateMarks(range, 'week');
+    const marks = getDateMarks(range, 'week', 2026);
     expect(marks.map((m) => m.date.toISOString().slice(0, 10))).toEqual([
       '2026-04-27',
       '2026-05-04',
@@ -90,7 +90,7 @@ describe('getDateMarks (#31 — 모드별 라벨)', () => {
 
   it("'month' 모드 → 범위 내 매월 1일만 mark, 라벨은 'M월'", () => {
     // 4/24 ~ 5/23: 5/1 만 포함
-    const marks = getDateMarks(range, 'month');
+    const marks = getDateMarks(range, 'month', 2026);
     expect(marks).toHaveLength(1);
     expect(marks[0].date.toISOString().slice(0, 10)).toBe('2026-05-01');
     expect(marks[0].label).toBe('5월');
@@ -101,12 +101,36 @@ describe('getDateMarks (#31 — 모드별 라벨)', () => {
       epoch: new Date('2026-04-15T00:00:00Z'),
       totalDays: 62, // 4/15 ~ 6/15
     };
-    const marks = getDateMarks(wide, 'month');
+    const marks = getDateMarks(wide, 'month', 2026);
     expect(marks.map((m) => m.date.toISOString().slice(0, 10))).toEqual([
       '2026-05-01',
       '2026-06-01',
     ]);
     expect(marks.map((m) => m.label)).toEqual(['5월', '6월']);
+  });
+
+  it("연도 경계 'day' 모드 — 다른 해 라벨은 'YY/M/D' (#31 후속)", () => {
+    const wide: GanttRangePx = {
+      epoch: new Date('2025-12-30T00:00:00Z'),
+      totalDays: 5, // 12/30, 12/31, 1/1, 1/2, 1/3
+    };
+    const marks = getDateMarks(wide, 'day', 2026);
+    expect(marks.map((m) => m.label)).toEqual([
+      '25/12/30',
+      '25/12/31',
+      '1/1',
+      '1/2',
+      '1/3',
+    ]);
+  });
+
+  it("연도 경계 'month' 모드 — 다른 해 1일은 'YY/M월'", () => {
+    const wide: GanttRangePx = {
+      epoch: new Date('2025-10-15T00:00:00Z'),
+      totalDays: 100, // 10/15/2025 ~ 1/22/2026 → 11/1, 12/1, 1/1
+    };
+    const marks = getDateMarks(wide, 'month', 2026);
+    expect(marks.map((m) => m.label)).toEqual(['25/11월', '25/12월', '1월']);
   });
 });
 
