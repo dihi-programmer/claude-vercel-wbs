@@ -13,6 +13,23 @@ describe('<TaskList />', () => {
     expect(screen.getByText(/아직 작업이 없습니다/)).toBeInTheDocument();
   });
 
+  it('tasks=[] → 컬럼 헤더 행도 표시되지 않음 (#33)', () => {
+    const { container } = renderWithChakra(<TaskList tasks={[]} onRowClick={vi.fn()} />);
+    expect(container.querySelector('[data-testid="task-list-header"]')).toBeNull();
+  });
+
+  it('tasks 가 있으면 컬럼 헤더 행 표시 — 제목/담당자/상태/진행률/기간 라벨 모두 포함 (#33 SPEC §1 A-4)', () => {
+    const t = makeTask({ id: 'a', title: 'X' });
+    const { container } = renderWithChakra(<TaskList tasks={[t]} onRowClick={vi.fn()} />);
+    const header = container.querySelector('[data-testid="task-list-header"]');
+    expect(header).not.toBeNull();
+    expect(header?.textContent).toContain('제목');
+    expect(header?.textContent).toContain('담당자');
+    expect(header?.textContent).toContain('상태');
+    expect(header?.textContent).toContain('진행률');
+    expect(header?.textContent).toContain('기간');
+  });
+
   it('tasks 가 있으면 각 행이 role=button 으로 클릭 가능', () => {
     const t1 = makeTask({ id: 'id-1', title: 'Alpha' });
     const t2 = makeTask({ id: 'id-2', title: 'Beta' });
