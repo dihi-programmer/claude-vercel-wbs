@@ -190,6 +190,25 @@ describe('<GanttView />', () => {
       expect(marks.length).toBe(totalDays);
     });
 
+    it('모드 토글 시 오늘이 viewport 중앙으로 자동 스크롤 (#31 요청 사항)', () => {
+      const t = makeTask({
+        id: 'a',
+        title: 'X',
+        startDate: '2026-05-01',
+        dueDate: '2026-05-31',
+      });
+      const now = new Date('2026-05-14T00:00:00Z');
+      const { container } = renderWithChakra(<GanttView tasks={[t]} now={now} />);
+      // 일 클릭 후 scrollLeft 가 todayPx - clientWidth/2 와 일치
+      fireEvent.click(screen.getByRole('button', { name: '일' }));
+      const scroller = container.querySelector('[data-mode]') as HTMLElement;
+      const todayPx = Number(
+        container.querySelector('[data-testid="today-line"]')!.getAttribute('data-today-px'),
+      );
+      // jsdom 은 layout 이 없어 clientWidth=0 → scrollLeft = todayPx
+      expect(scroller.scrollLeft).toBeCloseTo(todayPx - scroller.clientWidth / 2, 1);
+    });
+
     it('"월" 클릭 → data-mode="month", 라벨이 "M월" 형식', () => {
       const t = makeTask({
         id: 'a',

@@ -78,28 +78,33 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
     ((startOfDayUtc(now).getTime() - range.epoch.getTime()) / ONE_DAY_MS) * ppd;
 
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const prevPpdRef = useRef<number>(ppd);
 
-  // 마운트 시 오늘 중심으로 스크롤 보정.
+  // 마운트 시 + 모드 변경 시 오늘을 viewport 중심으로 정렬.
+  // 모드 토글은 "오늘 기준 줌" — 직전 중심 날짜를 유지하지 않음.
+  // 컨텐츠 폭이 viewport 보다 좁아 today 를 중앙에 둘 수 없으면
+  // 부족한 만큼 양방향으로 자동 확장한 뒤 다음 사이클에서 scrollLeft 설정.
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
-    el.scrollLeft = todayPx - el.clientWidth / 2;
-    // mount 1회만; mode 변경 보정은 아래 effect 에서.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // 모드 변경 시: 변경 직전 viewport 중심에 보이던 날짜를 새 모드에서도
-  // 동일한 viewport 중심에 두도록 scrollLeft 를 보정.
-  useEffect(() => {
-    const el = scrollerRef.current;
-    const prevPpd = prevPpdRef.current;
-    if (!el || prevPpd === ppd) return;
-    const prevCenterPx = el.scrollLeft + el.clientWidth / 2;
-    const centerDays = prevCenterPx / prevPpd;
-    el.scrollLeft = centerDays * ppd - el.clientWidth / 2;
-    prevPpdRef.current = ppd;
-  }, [ppd]);
+    const wanted = todayPx - el.clientWidth / 2;
+    const contentWidth = range.totalDays * ppd;
+    const overflowLeft = Math.max(0, -wanted);
+    const overflowRight = Math.max(0, wanted + el.clientWidth - contentWidth);
+    if (overflowLeft > 0 || overflowRight > 0) {
+      let next = range;
+      if (overflowLeft > 0) {
+        const days = Math.ceil(overflowLeft / ppd);
+        next = extendRange(next, 'past', days).range;
+      }
+      if (overflowRight > 0) {
+        const days = Math.ceil(overflowRight / ppd);
+        next = extendRange(next, 'future', days).range;
+      }
+      setRange(next);
+      return;
+    }
+    el.scrollLeft = wanted;
+  }, [ppd, todayPx, range]);
 
   if (tasks.length === 0) {
     return (
