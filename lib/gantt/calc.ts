@@ -185,3 +185,28 @@ export function getDateMarks(range: GanttRangePx, mode: GanttMode): GanttMark[] 
   }
   return marks;
 }
+
+export type ExtendDirection = 'past' | 'future';
+
+export function extendRange(
+  range: GanttRangePx,
+  direction: ExtendDirection,
+  days: number,
+): { range: GanttRangePx; deltaDaysAtStart: number } {
+  if (direction === 'past') {
+    return {
+      range: {
+        epoch: addDays(range.epoch, -days),
+        totalDays: range.totalDays + days,
+      },
+      deltaDaysAtStart: days,
+    };
+  }
+  return {
+    range: {
+      epoch: range.epoch,
+      totalDays: range.totalDays + days,
+    },
+    deltaDaysAtStart: 0,
+  };
+}

@@ -6,6 +6,7 @@ import type { Task } from '@/lib/db/schema';
 import {
   pxPerDay,
   getDateMarks,
+  extendRange,
   type GanttMode,
   type GanttRangePx,
 } from '@/lib/gantt/calc';
@@ -22,6 +23,8 @@ export type GanttViewProps = {
 const LEFT_COL_WIDTH = '240px';
 const ROW_HEIGHT = '36px';
 const INITIAL_PAD_DAYS = 30;
+const EDGE_THRESHOLD_PX = 200;
+const EXTEND_DAYS = 60;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 function flattenTree(nodes: TaskNode[]): TaskNode[] {
@@ -61,10 +64,15 @@ function calculateInitialRangePx(tasks: Task[], now: Date): GanttRangePx {
 
 export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
   const [mode, setMode] = useState<GanttMode>('week');
-  const range = useMemo(
+  const initialRange = useMemo(
     () => calculateInitialRangePx(tasks, now),
     [tasks, now],
   );
+  const [range, setRange] = useState<GanttRangePx>(initialRange);
+  // tasks/now 변경 시 초기 범위 재계산.
+  useEffect(() => {
+    setRange(initialRange);
+  }, [initialRange]);
   const ppd = pxPerDay(mode);
   const flat = useMemo(() => flattenTree(buildTaskTree(tasks)), [tasks]);
   const marks = useMemo(() => getDateMarks(range, mode), [range, mode]);
@@ -147,6 +155,25 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
         data-px-per-day={String(ppd)}
         data-epoch-iso={range.epoch.toISOString()}
         data-total-days={String(range.totalDays)}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          const nearLeft = el.scrollLeft < EDGE_THRESHOLD_PX;
+          const nearRight =
+            el.scrollWidth - (el.scrollLeft + el.clientWidth) < EDGE_THRESHOLD_PX;
+          if (nearLeft) {
+            const out = extendRange(range, 'past', EXTEND_DAYS);
+            setRange(out.range);
+            // 시각적 점프 방지 — prepend 한 만큼 scrollLeft 보정.
+            requestAnimationFrame(() => {
+              if (scrollerRef.current) {
+                scrollerRef.current.scrollLeft += out.deltaDaysAtStart * ppd;
+              }
+            });
+          } else if (nearRight) {
+            const out = extendRange(range, 'future', EXTEND_DAYS);
+            setRange(out.range);
+          }
+        }}
       >
         {/* 스크롤되는 wide inner box */}
         <Box width={`${totalWidthPx}px`} position="relative">
