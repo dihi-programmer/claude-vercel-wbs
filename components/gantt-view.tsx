@@ -10,7 +10,7 @@ import {
   type GanttMode,
   type GanttRangePx,
 } from '@/lib/gantt/calc';
-import { buildTaskTree, type TaskNode } from '@/lib/tasks/build-tree';
+import { buildTaskTree, flattenVisibleNodes } from '@/lib/tasks/build-tree';
 import { isOverdue } from '@/lib/overdue/is-overdue';
 import { GanttBar } from './gantt-bar';
 import { GanttModeToggle } from './gantt-mode-toggle';
@@ -27,16 +27,6 @@ const INITIAL_PAD_DAYS = 90;
 const EDGE_THRESHOLD_PX = 200;
 const EXTEND_DAYS = 60;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
-function flattenTree(nodes: TaskNode[]): TaskNode[] {
-  const out: TaskNode[] = [];
-  const walk = (n: TaskNode): void => {
-    out.push(n);
-    for (const c of n.children) walk(c);
-  };
-  for (const n of nodes) walk(n);
-  return out;
-}
 
 function startOfDayUtc(d: Date): Date {
   const out = new Date(d);
@@ -71,7 +61,20 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
     calculateInitialRangePx(tasks, now),
   );
   const ppd = pxPerDay(mode);
-  const flat = useMemo(() => flattenTree(buildTaskTree(tasks)), [tasks]);
+  const tree = useMemo(() => buildTaskTree(tasks), [tasks]);
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
+  const flat = useMemo(
+    () => flattenVisibleNodes(tree, collapsedIds),
+    [tree, collapsedIds],
+  );
+  const toggleCollapsed = (id: string): void => {
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
   const currentYear = startOfDayUtc(now).getUTCFullYear();
   const marks = useMemo(
     () => getDateMarks(range, mode, currentYear),
@@ -149,11 +152,15 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
           fontSize="sm"
           data-row-height-px={ROW_HEIGHT_PX}
         >
+          {/* 토글 자리 — 행과 정렬 유지 (헤더는 빈 슬롯) */}
+          <Box w={7} flexShrink={0} />
           <Text flex="1">작업</Text>
           <Text>진행률</Text>
         </Flex>
         {flat.map((node) => {
           const indentPx = 12 + node.depth * 16;
+          const hasChildren = node.children.length > 0;
+          const isCollapsed = collapsedIds.has(node.task.id);
           return (
             <Flex
               key={node.task.id}
@@ -167,6 +174,29 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
               data-indent-px={String(indentPx)}
               data-row-height-px={ROW_HEIGHT_PX}
             >
+              <Box
+                w={7}
+                flexShrink={0}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+              >
+                {hasChildren && (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    minW={0}
+                    px={1}
+                    aria-label={isCollapsed ? '펼치기' : '접기'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleCollapsed(node.task.id);
+                    }}
+                  >
+                    {isCollapsed ? '▶' : '▼'}
+                  </Button>
+                )}
+              </Box>
               <Text fontSize="sm" fontWeight="medium" flex="1" truncate>
                 {node.task.title}
               </Text>
