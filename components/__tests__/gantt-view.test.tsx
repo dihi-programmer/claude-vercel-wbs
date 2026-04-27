@@ -213,6 +213,31 @@ describe('<GanttView />', () => {
       expect(scroller.scrollLeft).toBeCloseTo(todayPx - scroller.clientWidth / 2, 1);
     });
 
+    it('좌측 스크롤로 past prepend → scrollLeft 가 같은 사이클에서 deltaPx 만큼 보정 (#41)', () => {
+      const t = makeTask({
+        id: 'a',
+        title: 'X',
+        startDate: '2026-05-01',
+        dueDate: '2026-05-31',
+      });
+      const now = new Date('2026-05-14T00:00:00Z');
+      const { container } = renderWithChakra(<GanttView tasks={[t]} now={now} />);
+      const scroller = container.querySelector('[data-mode]') as HTMLElement;
+      const ppd = Number(scroller.getAttribute('data-px-per-day'));
+      const beforeTotalDays = Number(scroller.getAttribute('data-total-days'));
+      // scrollLeft 를 nearLeft 임계값(200) 이하로 설정 후 scroll 이벤트 발화.
+      Object.defineProperty(scroller, 'scrollLeft', {
+        configurable: true,
+        writable: true,
+        value: 50,
+      });
+      fireEvent.scroll(scroller);
+      // useLayoutEffect 가 같은 사이클에서 동기 보정 → totalDays +60, scrollLeft += 60*ppd
+      const afterTotalDays = Number(scroller.getAttribute('data-total-days'));
+      expect(afterTotalDays).toBe(beforeTotalDays + 60);
+      expect(scroller.scrollLeft).toBeCloseTo(50 + 60 * ppd, 0);
+    });
+
     it('모드 토글 시 오늘이 viewport 중앙으로 자동 스크롤 (#31 요청 사항)', () => {
       const t = makeTask({
         id: 'a',
