@@ -7,6 +7,23 @@ export type GanttBar = {
   progressPct: number;
 };
 
+// #31 — px 기반 레이어 (가로 무한스크롤 + 모드 토글용)
+export type GanttMode = 'day' | 'week' | 'month';
+export type GanttRangePx = { epoch: Date; totalDays: number };
+export type GanttBarPx = {
+  leftPx: number;
+  widthPx: number;
+  progressPct: number;
+};
+export type GanttMark = {
+  date: Date;
+  leftPx: number;
+  label: string;
+};
+
+// 라벨 사이의 시각적 간격 (모드 무관 동일).
+export const LABEL_GAP_PX = 60;
+
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 function parseIsoDate(s: string): Date {
@@ -78,6 +95,93 @@ export function getWeekMarks(range: GanttRange): Date[] {
   while (current.getTime() <= range.end.getTime()) {
     marks.push(current);
     current = addDays(current, 7);
+  }
+  return marks;
+}
+
+// ---- #31 px 레이어 ----
+
+export function pxPerDay(mode: GanttMode): number {
+  switch (mode) {
+    case 'day':
+      return LABEL_GAP_PX;
+    case 'week':
+      return LABEL_GAP_PX / 7;
+    case 'month':
+      return LABEL_GAP_PX / 30;
+  }
+}
+
+function daysBetween(epoch: Date, target: Date): number {
+  return Math.round((target.getTime() - epoch.getTime()) / ONE_DAY_MS);
+}
+
+export function calculateBarPx(
+  startDate: string,
+  dueDate: string,
+  progress: number,
+  epoch: Date,
+  ppd: number,
+): GanttBarPx {
+  const start = parseIsoDate(startDate);
+  const due = parseIsoDate(dueDate);
+  const offsetDays = daysBetween(epoch, start);
+  // due 포함 일수: due - start + 1
+  const inclusiveDays = daysBetween(start, due) + 1;
+  return {
+    leftPx: offsetDays * ppd,
+    widthPx: inclusiveDays * ppd,
+    progressPct: Math.max(0, Math.min(100, progress)),
+  };
+}
+
+function formatMD(d: Date): string {
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+}
+
+function formatMonthLabel(d: Date): string {
+  return `${d.getUTCMonth() + 1}월`;
+}
+
+export function getDateMarks(range: GanttRangePx, mode: GanttMode): GanttMark[] {
+  const ppd = pxPerDay(mode);
+  const marks: GanttMark[] = [];
+  const epoch = startOfDayUtc(range.epoch);
+  const endExclusive = addDays(epoch, range.totalDays);
+
+  if (mode === 'day') {
+    for (let i = 0; i < range.totalDays; i++) {
+      const d = addDays(epoch, i);
+      marks.push({ date: d, leftPx: i * ppd, label: formatMD(d) });
+    }
+    return marks;
+  }
+
+  if (mode === 'week') {
+    let current = firstMondayOnOrAfter(epoch);
+    while (current.getTime() < endExclusive.getTime()) {
+      marks.push({
+        date: current,
+        leftPx: daysBetween(epoch, current) * ppd,
+        label: formatMD(current),
+      });
+      current = addDays(current, 7);
+    }
+    return marks;
+  }
+
+  // 'month': 범위 내 각 월의 1일
+  let current = new Date(Date.UTC(epoch.getUTCFullYear(), epoch.getUTCMonth(), 1));
+  if (current.getTime() < epoch.getTime()) {
+    current = new Date(Date.UTC(epoch.getUTCFullYear(), epoch.getUTCMonth() + 1, 1));
+  }
+  while (current.getTime() < endExclusive.getTime()) {
+    marks.push({
+      date: current,
+      leftPx: daysBetween(epoch, current) * ppd,
+      label: formatMonthLabel(current),
+    });
+    current = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() + 1, 1));
   }
   return marks;
 }
