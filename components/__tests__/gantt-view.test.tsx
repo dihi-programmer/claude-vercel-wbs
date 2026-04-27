@@ -2,7 +2,7 @@
  * RED: GanttView (Issue #7 Stage 3, SPEC §7 G-2 + #31 px 레이어/모드).
  */
 import { describe, it, expect } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 import { GanttView } from '../gantt-view';
 import { renderWithChakra } from './helpers';
 import { LABEL_GAP_PX } from '@/lib/gantt/calc';
@@ -169,6 +169,46 @@ describe('<GanttView />', () => {
       expect(labels).toContain('5/4');
       expect(labels).toContain('5/11');
       expect(labels).toContain('5/18');
+    });
+
+    it('"일" 클릭 → data-mode="day", data-px-per-day=60', () => {
+      const t = makeTask({
+        id: 'a',
+        title: 'X',
+        startDate: '2026-05-01',
+        dueDate: '2026-05-31',
+      });
+      const now = new Date('2026-05-14T00:00:00Z');
+      const { container } = renderWithChakra(<GanttView tasks={[t]} now={now} />);
+      fireEvent.click(screen.getByRole('button', { name: '일' }));
+      const scroller = container.querySelector('[data-mode]')!;
+      expect(scroller.getAttribute('data-mode')).toBe('day');
+      expect(Number(scroller.getAttribute('data-px-per-day'))).toBe(LABEL_GAP_PX);
+      // day 모드 → 마크 개수 = totalDays
+      const totalDays = Number(scroller.getAttribute('data-total-days'));
+      const marks = container.querySelectorAll('[data-mark-leftpx]');
+      expect(marks.length).toBe(totalDays);
+    });
+
+    it('"월" 클릭 → data-mode="month", 라벨이 "M월" 형식', () => {
+      const t = makeTask({
+        id: 'a',
+        title: 'X',
+        startDate: '2026-05-01',
+        dueDate: '2026-05-31',
+      });
+      const now = new Date('2026-05-14T00:00:00Z');
+      const { container } = renderWithChakra(<GanttView tasks={[t]} now={now} />);
+      fireEvent.click(screen.getByRole('button', { name: '월' }));
+      const scroller = container.querySelector('[data-mode]')!;
+      expect(scroller.getAttribute('data-mode')).toBe('month');
+      expect(Number(scroller.getAttribute('data-px-per-day'))).toBeCloseTo(LABEL_GAP_PX / 30, 4);
+      // 4/1~6/30 범위 → 5/1, 6/1 두 mark
+      const labels = Array.from(container.querySelectorAll('[data-mark-leftpx]')).map(
+        (m) => m.textContent,
+      );
+      expect(labels).toContain('5월');
+      expect(labels).toContain('6월');
     });
 
     it('totalDays 가 epoch ~ end 일수와 일치 (data-total-days)', () => {
