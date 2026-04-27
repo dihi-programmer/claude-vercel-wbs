@@ -92,11 +92,21 @@ export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick, on
             _hover={{ bg: 'bg.subtle' }}
           >
             <Flex gap={4} align="center">
-              <Box minW={4}>
+              <Box
+                w={7}
+                flexShrink={0}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                data-testid="task-toggle-slot"
+                data-slot-width="28"
+              >
                 {hasChildren && (
                   <Button
                     size="xs"
                     variant="ghost"
+                    minW={0}
+                    px={1}
                     aria-label={isCollapsed ? '펼치기' : '접기'}
                     onClick={(e) => {
                       e.stopPropagation();
