@@ -1,8 +1,14 @@
 'use client';
 
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Flex, Text } from '@chakra-ui/react';
 import type { Task } from '@/lib/db/schema';
-import { calculateRange, getWeekMarks, type GanttRange } from '@/lib/gantt/calc';
+import {
+  pxPerDay,
+  getDateMarks,
+  type GanttMode,
+  type GanttRangePx,
+} from '@/lib/gantt/calc';
 import { buildTaskTree, type TaskNode } from '@/lib/tasks/build-tree';
 import { isOverdue } from '@/lib/overdue/is-overdue';
 import { GanttBar } from './gantt-bar';
@@ -14,6 +20,8 @@ export type GanttViewProps = {
 
 const LEFT_COL_WIDTH = '240px';
 const ROW_HEIGHT = '36px';
+const INITIAL_PAD_DAYS = 30;
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 function flattenTree(nodes: TaskNode[]): TaskNode[] {
   const out: TaskNode[] = [];
@@ -25,16 +33,56 @@ function flattenTree(nodes: TaskNode[]): TaskNode[] {
   return out;
 }
 
-function formatWeekLabel(d: Date): string {
-  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+function startOfDayUtc(d: Date): Date {
+  const out = new Date(d);
+  out.setUTCHours(0, 0, 0, 0);
+  return out;
 }
 
-function pctOfRange(d: Date, range: GanttRange): number {
-  const total = range.end.getTime() - range.start.getTime();
-  return ((d.getTime() - range.start.getTime()) / total) * 100;
+function addDays(d: Date, days: number): Date {
+  return new Date(d.getTime() + days * ONE_DAY_MS);
+}
+
+function calculateInitialRangePx(tasks: Task[], now: Date): GanttRangePx {
+  const today = startOfDayUtc(now);
+  const dates: Date[] = [today];
+  for (const t of tasks) {
+    if (t.startDate) dates.push(new Date(`${t.startDate}T00:00:00Z`));
+    if (t.dueDate) dates.push(new Date(`${t.dueDate}T00:00:00Z`));
+  }
+  const minMs = Math.min(...dates.map((d) => d.getTime()));
+  const maxMs = Math.max(...dates.map((d) => d.getTime()));
+  const epoch = addDays(new Date(minMs), -INITIAL_PAD_DAYS);
+  const end = addDays(new Date(maxMs), INITIAL_PAD_DAYS);
+  const totalDays = Math.round((end.getTime() - epoch.getTime()) / ONE_DAY_MS);
+  return { epoch, totalDays };
 }
 
 export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
+  const [mode] = useState<GanttMode>('week');
+  const range = useMemo(
+    () => calculateInitialRangePx(tasks, now),
+    [tasks, now],
+  );
+  const ppd = pxPerDay(mode);
+  const flat = useMemo(() => flattenTree(buildTaskTree(tasks)), [tasks]);
+  const marks = useMemo(() => getDateMarks(range, mode), [range, mode]);
+
+  const totalWidthPx = range.totalDays * ppd;
+  const todayPx =
+    ((startOfDayUtc(now).getTime() - range.epoch.getTime()) / ONE_DAY_MS) * ppd;
+
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+
+  // 마운트 시 오늘 중심으로 스크롤 보정.
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.scrollLeft = todayPx - el.clientWidth / 2;
+    // mount 1회만; mode 변경 보정은 Stage 3 에서 처리.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (tasks.length === 0) {
     return (
       <Box py={10} textAlign="center">
@@ -43,98 +91,108 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
     );
   }
 
-  const range = calculateRange(tasks, now);
-  const flat = flattenTree(buildTaskTree(tasks));
-  const weekMarks = getWeekMarks(range);
-
-  const nowMs = now.getTime();
-  const todayInRange = nowMs >= range.start.getTime() && nowMs <= range.end.getTime();
-  const todayPct = todayInRange ? pctOfRange(now, range) : null;
-
   return (
     <Flex borderWidth="1px" borderRadius="md" overflow="hidden">
       {/* 좌측: 작업 트리 */}
       <Box width={LEFT_COL_WIDTH} flexShrink={0} borderRightWidth="1px">
-        {/* 헤더 높이 맞춤 */}
         <Box h={ROW_HEIGHT} borderBottomWidth="1px" />
         {flat.map((node) => {
-          // task-list 와 동일한 Chakra v3 spacing fallback 회피.
-          // 좌측 컬럼 240px 안에서 16px 증분 (depth 0→12, 1→28, 2→44, 3→60).
           const indentPx = 12 + node.depth * 16;
           return (
-          <Flex
-            key={node.task.id}
-            h={ROW_HEIGHT}
-            alignItems="center"
-            pl={`${indentPx}px`}
-            pr={2}
-            borderBottomWidth="1px"
-            gap={2}
-            data-depth={node.depth}
-            data-indent-px={String(indentPx)}
-          >
-            <Text fontSize="sm" fontWeight="medium" flex="1" truncate>
-              {node.task.title}
-            </Text>
-            <Text fontSize="xs" color="fg.muted">
-              {node.task.progress}%
-            </Text>
-          </Flex>
+            <Flex
+              key={node.task.id}
+              h={ROW_HEIGHT}
+              alignItems="center"
+              pl={`${indentPx}px`}
+              pr={2}
+              borderBottomWidth="1px"
+              gap={2}
+              data-depth={node.depth}
+              data-indent-px={String(indentPx)}
+            >
+              <Text fontSize="sm" fontWeight="medium" flex="1" truncate>
+                {node.task.title}
+              </Text>
+              <Text fontSize="xs" color="fg.muted">
+                {node.task.progress}%
+              </Text>
+            </Flex>
           );
         })}
       </Box>
 
-      {/* 우측: 날짜 그리드 + 막대 + 오늘선 */}
-      <Box flex="1" position="relative" minW="0">
-        {/* 주 단위 눈금 헤더 */}
-        <Box h={ROW_HEIGHT} borderBottomWidth="1px" position="relative">
-          {weekMarks.map((d, i) => (
-            <Text
-              key={i}
-              position="absolute"
-              left={`${pctOfRange(d, range)}%`}
-              top="50%"
-              transform="translate(-50%, -50%)"
-              fontSize="xs"
-              color="fg.muted"
-              whiteSpace="nowrap"
-            >
-              {formatWeekLabel(d)}
-            </Text>
-          ))}
-        </Box>
-
-        {/* 각 작업 행 */}
-        {flat.map((node) => (
+      {/* 우측: 가로 스크롤 컨테이너 */}
+      <Box
+        ref={scrollerRef}
+        flex="1"
+        minW="0"
+        overflowX="auto"
+        position="relative"
+        data-mode={mode}
+        data-px-per-day={String(ppd)}
+        data-epoch-iso={range.epoch.toISOString()}
+        data-total-days={String(range.totalDays)}
+      >
+        {/* 스크롤되는 wide inner box */}
+        <Box width={`${totalWidthPx}px`} position="relative">
+          {/* 헤더 — sticky top */}
           <Box
-            key={node.task.id}
             h={ROW_HEIGHT}
             borderBottomWidth="1px"
-            position="relative"
+            position="sticky"
+            top={0}
+            bg="bg"
+            zIndex={1}
           >
-            <GanttBar
-              startDate={node.task.startDate}
-              dueDate={node.task.dueDate}
-              progress={node.task.progress}
-              range={range}
-              overdue={isOverdue(node.task.dueDate, node.task.status, now)}
-            />
+            {marks.map((m, i) => (
+              <Text
+                key={i}
+                position="absolute"
+                left={`${m.leftPx}px`}
+                top="50%"
+                transform="translate(-50%, -50%)"
+                fontSize="xs"
+                color="fg.muted"
+                whiteSpace="nowrap"
+                data-mark-leftpx={String(m.leftPx)}
+              >
+                {m.label}
+              </Text>
+            ))}
           </Box>
-        ))}
 
-        {/* 오늘 세로선 overlay */}
-        {todayPct !== null && (
+          {/* 각 작업 행 */}
+          {flat.map((node) => (
+            <Box
+              key={node.task.id}
+              h={ROW_HEIGHT}
+              borderBottomWidth="1px"
+              position="relative"
+            >
+              <GanttBar
+                startDate={node.task.startDate}
+                dueDate={node.task.dueDate}
+                progress={node.task.progress}
+                epoch={range.epoch}
+                pxPerDay={ppd}
+                overdue={isOverdue(node.task.dueDate, node.task.status, now)}
+              />
+            </Box>
+          ))}
+
+          {/* 오늘 세로선 overlay */}
           <Box
             data-testid="today-line"
+            data-today-px={String(todayPx)}
             position="absolute"
             top={0}
             bottom={0}
-            left={`${todayPct}%`}
+            left={`${todayPx}px`}
             width="2px"
             bg="red.500"
             pointerEvents="none"
           />
-        )}
+        </Box>
       </Box>
     </Flex>
   );

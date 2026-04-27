@@ -183,8 +183,8 @@ describe('<GanttView />', () => {
       const scroller = container.querySelector('[data-mode]')!;
       const totalDays = Number(scroller.getAttribute('data-total-days'));
       // 초기 범위: min(start,today)-30d ~ max(due,today)+30d
-      // = 2026-04-01 ~ 2026-06-30 → 91 days
-      expect(totalDays).toBe(91);
+      // epoch=2026-04-01, end=2026-06-30 → 90일
+      expect(totalDays).toBe(90);
     });
   });
 });
