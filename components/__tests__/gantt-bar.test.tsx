@@ -1,45 +1,45 @@
 /**
- * RED: GanttBar (Issue #7 Stage 2, SPEC §7 G-2).
+ * RED: GanttBar (Issue #7 Stage 2, SPEC §7 G-2 — px 기반 #31).
  */
 import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
 import { GanttBar } from '../gantt-bar';
 import { renderWithChakra } from './helpers';
-import type { GanttRange } from '@/lib/gantt/calc';
+import { LABEL_GAP_PX, pxPerDay } from '@/lib/gantt/calc';
 
-const range: GanttRange = {
-  start: new Date('2026-05-01T00:00:00Z'),
-  end: new Date('2026-05-31T00:00:00Z'),
-};
+const epoch = new Date('2026-04-24T00:00:00Z'); // Fri
+const ppd = pxPerDay('day'); // 60
 
 describe('<GanttBar />', () => {
   it('startDate 만 있고 dueDate 없음 → "— 일정 없음 —"', () => {
     renderWithChakra(
-      <GanttBar startDate="2026-05-01" dueDate={null} progress={0} range={range} />,
+      <GanttBar startDate="2026-05-01" dueDate={null} progress={0} epoch={epoch} pxPerDay={ppd} />,
     );
     expect(screen.getByText(/일정 없음/)).toBeInTheDocument();
   });
 
   it('dueDate 만 있고 startDate 없음 → "— 일정 없음 —"', () => {
     renderWithChakra(
-      <GanttBar startDate={null} dueDate="2026-05-31" progress={0} range={range} />,
+      <GanttBar startDate={null} dueDate="2026-05-31" progress={0} epoch={epoch} pxPerDay={ppd} />,
     );
     expect(screen.getByText(/일정 없음/)).toBeInTheDocument();
   });
 
-  it('둘 다 있음 → data-left-pct · data-width-pct 속성 렌더', () => {
+  it('둘 다 있음 → data-left-px · data-width-px 속성 렌더', () => {
     const { container } = renderWithChakra(
       <GanttBar
         startDate="2026-05-01"
-        dueDate="2026-05-31"
+        dueDate="2026-05-04"
         progress={50}
-        range={range}
+        epoch={epoch}
+        pxPerDay={ppd}
       />,
     );
-    const bar = container.querySelector('[data-left-pct]');
+    const bar = container.querySelector('[data-left-px]');
     expect(bar).not.toBeNull();
-    expect(bar!.getAttribute('data-width-pct')).not.toBeNull();
-    // 일정 없음 문구는 없어야 함
+    // start = epoch + 7d, due = start + 3d → leftPx = 7*60=420, widthPx = 4*60=240
+    expect(bar?.getAttribute('data-left-px')).toBe('420');
+    expect(bar?.getAttribute('data-width-px')).toBe('240');
     expect(screen.queryByText(/일정 없음/)).toBeNull();
   });
 
@@ -47,9 +47,10 @@ describe('<GanttBar />', () => {
     const { container } = renderWithChakra(
       <GanttBar
         startDate="2026-05-01"
-        dueDate="2026-05-31"
+        dueDate="2026-05-04"
         progress={0}
-        range={range}
+        epoch={epoch}
+        pxPerDay={ppd}
       />,
     );
     expect(container.querySelector('[data-progress-pct]')?.getAttribute('data-progress-pct')).toBe('0');
@@ -59,9 +60,10 @@ describe('<GanttBar />', () => {
     const { container } = renderWithChakra(
       <GanttBar
         startDate="2026-05-01"
-        dueDate="2026-05-31"
+        dueDate="2026-05-04"
         progress={100}
-        range={range}
+        epoch={epoch}
+        pxPerDay={ppd}
       />,
     );
     expect(container.querySelector('[data-progress-pct]')?.getAttribute('data-progress-pct')).toBe('100');
@@ -71,12 +73,30 @@ describe('<GanttBar />', () => {
     const { container } = renderWithChakra(
       <GanttBar
         startDate="2026-05-01"
-        dueDate="2026-05-31"
+        dueDate="2026-05-04"
         progress={60}
-        range={range}
+        epoch={epoch}
+        pxPerDay={ppd}
       />,
     );
     expect(container.querySelector('[data-progress-pct]')?.getAttribute('data-progress-pct')).toBe('60');
+  });
+
+  it("week 모드의 pxPerDay 로 leftPx/widthPx 가 1/7 로 압축", () => {
+    const ppdWeek = pxPerDay('week'); // 60/7
+    const { container } = renderWithChakra(
+      <GanttBar
+        startDate="2026-05-01"
+        dueDate="2026-05-04"
+        progress={50}
+        epoch={epoch}
+        pxPerDay={ppdWeek}
+      />,
+    );
+    const bar = container.querySelector('[data-left-px]')!;
+    // leftPx = 7 * (60/7) = 60, widthPx = 4 * (60/7) ≈ 34.28
+    expect(Number(bar.getAttribute('data-left-px'))).toBeCloseTo(60, 2);
+    expect(Number(bar.getAttribute('data-width-px'))).toBeCloseTo(4 * (LABEL_GAP_PX / 7), 2);
   });
 
   describe('overdue 표시 (Stage 3, SPEC §8 H-2 간트)', () => {
@@ -84,9 +104,10 @@ describe('<GanttBar />', () => {
       const { container } = renderWithChakra(
         <GanttBar
           startDate="2026-05-01"
-          dueDate="2026-05-31"
+          dueDate="2026-05-04"
           progress={50}
-          range={range}
+          epoch={epoch}
+          pxPerDay={ppd}
           overdue
         />,
       );
@@ -98,9 +119,10 @@ describe('<GanttBar />', () => {
       const { container } = renderWithChakra(
         <GanttBar
           startDate="2026-05-01"
-          dueDate="2026-05-31"
+          dueDate="2026-05-04"
           progress={50}
-          range={range}
+          epoch={epoch}
+          pxPerDay={ppd}
         />,
       );
       const bar = container.querySelector('[data-overdue]');
@@ -113,7 +135,8 @@ describe('<GanttBar />', () => {
           startDate={null}
           dueDate="2026-05-31"
           progress={50}
-          range={range}
+          epoch={epoch}
+          pxPerDay={ppd}
           overdue
         />,
       );
@@ -125,7 +148,7 @@ describe('<GanttBar />', () => {
   describe('"일정 없음" 수직 정렬 (#29)', () => {
     it('빈 상태 wrapper 가 data-testid="gantt-empty" 로 렌더되고 텍스트 포함', () => {
       const { container } = renderWithChakra(
-        <GanttBar startDate={null} dueDate={null} progress={0} range={range} />,
+        <GanttBar startDate={null} dueDate={null} progress={0} epoch={epoch} pxPerDay={ppd} />,
       );
       const empty = container.querySelector('[data-testid="gantt-empty"]');
       expect(empty).not.toBeNull();

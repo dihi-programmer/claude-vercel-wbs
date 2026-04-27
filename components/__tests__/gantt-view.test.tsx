@@ -1,10 +1,11 @@
 /**
- * RED: GanttView (Issue #7 Stage 3, SPEC §7 G-2).
+ * RED: GanttView (Issue #7 Stage 3, SPEC §7 G-2 + #31 px 레이어/모드).
  */
 import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
 import { GanttView } from '../gantt-view';
 import { renderWithChakra } from './helpers';
+import { LABEL_GAP_PX } from '@/lib/gantt/calc';
 import type { Task } from '@/lib/db/schema';
 
 function makeTask(overrides: Partial<Task> & { id: string; title: string }): Task {
@@ -74,17 +75,8 @@ describe('<GanttView />', () => {
     expect(container.querySelector('[data-testid="today-line"]')).not.toBeNull();
   });
 
-  it('오늘이 range 밖 → today-line 없음', () => {
-    const t = makeTask({
-      id: 'a',
-      title: 'X',
-      startDate: '2026-05-01',
-      dueDate: '2026-05-31',
-    });
-    const now = new Date('2027-01-01T00:00:00Z');
-    const { container } = renderWithChakra(<GanttView tasks={[t]} now={now} />);
-    expect(container.querySelector('[data-testid="today-line"]')).toBeNull();
-  });
+  // (#31) 새 모델에서 today 는 항상 range 의 anchor 로 포함됨 →
+  // "오늘 range 밖 → today-line 없음" 케이스는 더 이상 의미 없음 (제거).
 
   it('각 행에 data-depth 속성 (계층 들여쓰기)', () => {
     const p = makeTask({ id: 'p', title: 'Parent' });
@@ -125,5 +117,74 @@ describe('<GanttView />', () => {
     const rows = container.querySelectorAll('[data-depth]');
     const indentPxs = Array.from(rows).map((r) => Number(r.getAttribute('data-indent-px')));
     expect(indentPxs).toEqual([12, 28, 44, 60]);
+  });
+
+  describe('#31 px 레이어 + 모드', () => {
+    it('기본 모드 = "week" → data-mode="week", data-px-per-day ≈ 60/7', () => {
+      const t = makeTask({
+        id: 'a',
+        title: 'X',
+        startDate: '2026-05-01',
+        dueDate: '2026-05-31',
+      });
+      const now = new Date('2026-05-14T00:00:00Z');
+      const { container } = renderWithChakra(<GanttView tasks={[t]} now={now} />);
+      const scroller = container.querySelector('[data-mode]');
+      expect(scroller?.getAttribute('data-mode')).toBe('week');
+      const ppd = Number(scroller?.getAttribute('data-px-per-day'));
+      expect(ppd).toBeCloseTo(LABEL_GAP_PX / 7, 4);
+    });
+
+    it('today-line 에 data-today-px = (now - epoch) * pxPerDay', () => {
+      const t = makeTask({
+        id: 'a',
+        title: 'X',
+        startDate: '2026-05-01',
+        dueDate: '2026-05-31',
+      });
+      const now = new Date('2026-05-14T00:00:00Z');
+      const { container } = renderWithChakra(<GanttView tasks={[t]} now={now} />);
+      const scroller = container.querySelector('[data-mode]')!;
+      const epochIso = scroller.getAttribute('data-epoch-iso')!;
+      const ppd = Number(scroller.getAttribute('data-px-per-day'));
+      const epoch = new Date(epochIso);
+      const expected =
+        ((now.getTime() - epoch.getTime()) / (24 * 60 * 60 * 1000)) * ppd;
+      const todayLine = container.querySelector('[data-testid="today-line"]')!;
+      expect(Number(todayLine.getAttribute('data-today-px'))).toBeCloseTo(expected, 1);
+    });
+
+    it('헤더 마크가 [data-mark-leftpx] 로 렌더되고, week 모드에서 월요일 라벨 모두 포함', () => {
+      const t = makeTask({
+        id: 'a',
+        title: 'X',
+        startDate: '2026-05-01',
+        dueDate: '2026-05-31',
+      });
+      const now = new Date('2026-05-14T00:00:00Z');
+      const { container } = renderWithChakra(<GanttView tasks={[t]} now={now} />);
+      const marks = container.querySelectorAll('[data-mark-leftpx]');
+      expect(marks.length).toBeGreaterThan(0);
+      const labels = Array.from(marks).map((m) => m.textContent);
+      expect(labels).toContain('5/4');
+      expect(labels).toContain('5/11');
+      expect(labels).toContain('5/18');
+    });
+
+    it('totalDays 가 epoch ~ end 일수와 일치 (data-total-days)', () => {
+      const t = makeTask({
+        id: 'a',
+        title: 'X',
+        startDate: '2026-05-01',
+        dueDate: '2026-05-31',
+      });
+      const now = new Date('2026-05-14T00:00:00Z');
+      const { container } = renderWithChakra(<GanttView tasks={[t]} now={now} />);
+      const scroller = container.querySelector('[data-mode]')!;
+      const totalDays = Number(scroller.getAttribute('data-total-days'));
+      // 초기 범위: min(start,today)-30d ~ max(due,today)+30d
+      // = 2026-04-01 ~ 2026-06-30 → 91 days
+      expect(totalDays).toBe(91);
+    });
   });
 });
