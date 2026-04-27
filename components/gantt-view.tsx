@@ -57,16 +57,21 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
       <Box width={LEFT_COL_WIDTH} flexShrink={0} borderRightWidth="1px">
         {/* 헤더 높이 맞춤 */}
         <Box h={ROW_HEIGHT} borderBottomWidth="1px" />
-        {flat.map((node) => (
+        {flat.map((node) => {
+          // task-list 와 동일한 Chakra v3 spacing fallback 회피.
+          // 좌측 컬럼 240px 안에서 16px 증분 (depth 0→12, 1→28, 2→44, 3→60).
+          const indentPx = 12 + node.depth * 16;
+          return (
           <Flex
             key={node.task.id}
             h={ROW_HEIGHT}
             alignItems="center"
-            pl={3 + node.depth * 4}
+            pl={`${indentPx}px`}
             pr={2}
             borderBottomWidth="1px"
             gap={2}
             data-depth={node.depth}
+            data-indent-px={String(indentPx)}
           >
             <Text fontSize="sm" fontWeight="medium" flex="1" truncate>
               {node.task.title}
@@ -75,7 +80,8 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
               {node.task.progress}%
             </Text>
           </Flex>
-        ))}
+          );
+        })}
       </Box>
 
       {/* 우측: 날짜 그리드 + 막대 + 오늘선 */}

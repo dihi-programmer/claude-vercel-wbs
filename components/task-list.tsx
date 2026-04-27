@@ -70,6 +70,9 @@ export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick, on
         const { task, depth, children } = node;
         const hasChildren = children.length > 0;
         const isCollapsed = collapsedIds.has(task.id);
+        // Chakra v3 spacing scale 은 12,14,16... 으로 점프 — 임의 정수(15,21)는
+        // 토큰 미스로 raw px fallback 됨. 직접 px 단위로 계산해 일관 증분 보장.
+        const indentPx = 12 + depth * 24;
         return (
           <Box
             key={task.id}
@@ -77,6 +80,7 @@ export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick, on
             aria-label={`작업: ${task.title}`}
             tabIndex={0}
             data-depth={depth}
+            data-indent-px={String(indentPx)}
             onClick={() => onRowClick(task)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -86,17 +90,27 @@ export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick, on
             }}
             cursor="pointer"
             p={3}
-            pl={3 + depth * 6}
+            pl={`${indentPx}px`}
             borderWidth="1px"
             borderRadius="md"
             _hover={{ bg: 'bg.subtle' }}
           >
             <Flex gap={4} align="center">
-              <Box minW={4}>
+              <Box
+                w={7}
+                flexShrink={0}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                data-testid="task-toggle-slot"
+                data-slot-width="28"
+              >
                 {hasChildren && (
                   <Button
                     size="xs"
                     variant="ghost"
+                    minW={0}
+                    px={1}
                     aria-label={isCollapsed ? '펼치기' : '접기'}
                     onClick={(e) => {
                       e.stopPropagation();

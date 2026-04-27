@@ -100,4 +100,30 @@ describe('<GanttView />', () => {
     expect(depths).toContain('0');
     expect(depths).toContain('1');
   });
+
+  it('depth 별 들여쓰기가 16px 일관 증분 (#27 — 2depth+ Chakra spacing fallback 버그)', () => {
+    const a = makeTask({ id: 'a', title: 'A' });
+    const b = makeTask({
+      id: 'b',
+      title: 'B',
+      parentId: 'a',
+      createdAt: new Date('2026-04-02T00:00:00Z'),
+    });
+    const c = makeTask({
+      id: 'c',
+      title: 'C',
+      parentId: 'b',
+      createdAt: new Date('2026-04-03T00:00:00Z'),
+    });
+    const d = makeTask({
+      id: 'd',
+      title: 'D',
+      parentId: 'c',
+      createdAt: new Date('2026-04-04T00:00:00Z'),
+    });
+    const { container } = renderWithChakra(<GanttView tasks={[a, b, c, d]} />);
+    const rows = container.querySelectorAll('[data-depth]');
+    const indentPxs = Array.from(rows).map((r) => Number(r.getAttribute('data-indent-px')));
+    expect(indentPxs).toEqual([12, 28, 44, 60]);
+  });
 });
