@@ -21,7 +21,8 @@ export type GanttViewProps = {
 };
 
 const LEFT_COL_WIDTH = '240px';
-const ROW_HEIGHT = '36px';
+const ROW_HEIGHT = '58px';
+const ROW_HEIGHT_PX = '58';
 const INITIAL_PAD_DAYS = 90;
 const EDGE_THRESHOLD_PX = 200;
 const EXTEND_DAYS = 60;
@@ -135,7 +136,22 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
     <Flex borderWidth="1px" borderRadius="md" overflow="hidden">
       {/* 좌측: 작업 트리 */}
       <Box width={LEFT_COL_WIDTH} flexShrink={0} borderRightWidth="1px">
-        <Box h={ROW_HEIGHT} borderBottomWidth="1px" />
+        {/* 좌측 헤더 — SPEC §7 G-4: '작업' / '진행률' */}
+        <Flex
+          h={ROW_HEIGHT}
+          alignItems="center"
+          pl="12px"
+          pr={2}
+          gap={2}
+          borderBottomWidth="1px"
+          color="fg.muted"
+          fontWeight="medium"
+          fontSize="sm"
+          data-row-height-px={ROW_HEIGHT_PX}
+        >
+          <Text flex="1">작업</Text>
+          <Text>진행률</Text>
+        </Flex>
         {flat.map((node) => {
           const indentPx = 12 + node.depth * 16;
           return (
@@ -149,6 +165,7 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
               gap={2}
               data-depth={node.depth}
               data-indent-px={String(indentPx)}
+              data-row-height-px={ROW_HEIGHT_PX}
             >
               <Text fontSize="sm" fontWeight="medium" flex="1" truncate>
                 {node.task.title}
@@ -207,6 +224,7 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
             top={0}
             bg="bg"
             zIndex={1}
+            data-row-height-px={ROW_HEIGHT_PX}
           >
             {marks.map((m, i) => (
               <Text
@@ -232,6 +250,7 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
               h={ROW_HEIGHT}
               borderBottomWidth="1px"
               position="relative"
+              data-row-height-px={ROW_HEIGHT_PX}
             >
               <GanttBar
                 startDate={node.task.startDate}
