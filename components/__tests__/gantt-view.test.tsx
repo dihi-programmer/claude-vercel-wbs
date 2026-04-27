@@ -277,6 +277,46 @@ describe('<GanttView />', () => {
       expect(screen.getByText('진행률')).toBeInTheDocument();
     });
 
+    it("자식 있는 부모 행 좌측에 ▼ 토글 버튼 + 자식 없는 단일 행에는 미렌더 (#37)", () => {
+      const p = makeTask({ id: 'p', title: 'Parent' });
+      const c = makeTask({ id: 'c', title: 'Child', parentId: 'p', createdAt: new Date('2026-04-02T00:00:00Z') });
+      const solo = makeTask({ id: 's', title: 'Solo', createdAt: new Date('2026-04-03T00:00:00Z') });
+      renderWithChakra(<GanttView tasks={[p, c, solo]} />);
+      // Parent 행에 접기 버튼 (aria-label='접기')
+      expect(screen.getByRole('button', { name: '접기' })).toBeInTheDocument();
+      // Solo 행에는 토글 버튼 없음 — 접기/펼치기 버튼은 1개만
+      expect(screen.queryAllByRole('button', { name: /접기|펼치기/ })).toHaveLength(1);
+    });
+
+    it("토글 클릭 → ▶ 로 변경 + aria-label '펼치기' (#37)", () => {
+      const p = makeTask({ id: 'p', title: 'Parent' });
+      const c = makeTask({ id: 'c', title: 'Child', parentId: 'p', createdAt: new Date('2026-04-02T00:00:00Z') });
+      renderWithChakra(<GanttView tasks={[p, c]} />);
+      fireEvent.click(screen.getByRole('button', { name: '접기' }));
+      expect(screen.getByRole('button', { name: '펼치기' })).toBeInTheDocument();
+    });
+
+    it("토글 클릭 → 좌측 트리에서 자식 행 사라짐 (#37)", () => {
+      const p = makeTask({ id: 'p', title: 'Parent' });
+      const c = makeTask({ id: 'c', title: 'Child', parentId: 'p', createdAt: new Date('2026-04-02T00:00:00Z') });
+      renderWithChakra(<GanttView tasks={[p, c]} />);
+      expect(screen.getByText('Child')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: '접기' }));
+      expect(screen.queryByText('Child')).toBeNull();
+    });
+
+    it("토글 클릭 → 좌·우 컬럼 행 개수 일치 (회귀 가드, #37)", () => {
+      const p = makeTask({ id: 'p', title: 'Parent' });
+      const c = makeTask({ id: 'c', title: 'Child', parentId: 'p', createdAt: new Date('2026-04-02T00:00:00Z') });
+      const { container } = renderWithChakra(<GanttView tasks={[p, c]} />);
+      // 좌측 트리 행 (data-depth) 와 우측 막대 영역 행 (data-row-height-px 중 헤더 제외)
+      const before = container.querySelectorAll('[data-depth]').length;
+      expect(before).toBe(2);
+      fireEvent.click(screen.getByRole('button', { name: '접기' }));
+      const after = container.querySelectorAll('[data-depth]').length;
+      expect(after).toBe(1);
+    });
+
     it("헤더와 작업 행 모두 data-row-height-px=\"58\" (목록 행과 시각적 일치)", () => {
       const t = makeTask({ id: 'a', title: 'X' });
       const { container } = renderWithChakra(<GanttView tasks={[t]} />);
