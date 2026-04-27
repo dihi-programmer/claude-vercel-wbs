@@ -77,6 +77,7 @@ export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick, on
         data-testid="task-list-header"
         p={3}
         pl="12px"
+        borderTopWidth="1px"
         borderBottomWidth="1px"
         color="fg.muted"
         fontWeight="medium"
