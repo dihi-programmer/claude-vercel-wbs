@@ -21,15 +21,19 @@ export function GanttBar({
   overdue = false,
 }: GanttBarProps) {
   // SPEC §7 G-2: 시작일/목표 기한 중 하나라도 비면 막대 없이 "— 일정 없음 —" 표기.
+  // CSS sticky 로 가로 스크롤해도 viewport 중앙에 고정 (#39).
   if (!startDate || !dueDate) {
     return (
       <Box
-        position="absolute"
-        inset="0"
-        display="flex"
+        position="sticky"
+        left="50%"
+        h="100%"
+        display="inline-flex"
         alignItems="center"
-        justifyContent="center"
+        whiteSpace="nowrap"
+        style={{ transform: 'translateX(-50%)' }}
         data-testid="gantt-empty"
+        data-sticky-center="true"
       >
         <Text fontSize="sm" color="fg.muted">
           — 일정 없음 —

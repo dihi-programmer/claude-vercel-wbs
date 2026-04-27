@@ -155,4 +155,14 @@ describe('<GanttBar />', () => {
       expect(empty?.textContent).toMatch(/일정 없음/);
     });
   });
+
+  describe('"일정 없음" 가로 스크롤 시 viewport 중앙 (#39)', () => {
+    it('빈 상태 wrapper 가 data-sticky-center="true" attribute 보유', () => {
+      const { container } = renderWithChakra(
+        <GanttBar startDate={null} dueDate={null} progress={0} epoch={epoch} pxPerDay={ppd} />,
+      );
+      const empty = container.querySelector('[data-testid="gantt-empty"]');
+      expect(empty?.getAttribute('data-sticky-center')).toBe('true');
+    });
+  });
 });
