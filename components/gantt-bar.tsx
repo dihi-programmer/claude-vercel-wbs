@@ -15,9 +15,18 @@ export function GanttBar({ startDate, dueDate, progress, range, overdue = false 
   // SPEC §7 G-2: 시작일/목표 기한 중 하나라도 비면 막대 없이 "— 일정 없음 —" 표기.
   if (!startDate || !dueDate) {
     return (
-      <Text fontSize="sm" color="fg.muted" textAlign="center">
-        — 일정 없음 —
-      </Text>
+      <Box
+        position="absolute"
+        inset="0"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        data-testid="gantt-empty"
+      >
+        <Text fontSize="sm" color="fg.muted">
+          — 일정 없음 —
+        </Text>
+      </Box>
     );
   }
 
