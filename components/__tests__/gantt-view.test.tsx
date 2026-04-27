@@ -222,9 +222,8 @@ describe('<GanttView />', () => {
       const { container } = renderWithChakra(<GanttView tasks={[t]} now={now} />);
       const scroller = container.querySelector('[data-mode]')!;
       const totalDays = Number(scroller.getAttribute('data-total-days'));
-      // 초기 범위: min(start,today)-30d ~ max(due,today)+30d
-      // epoch=2026-04-01, end=2026-06-30 → 90일
-      expect(totalDays).toBe(90);
+      // 초기 범위: min(start,today)-90d ~ max(due,today)+90d → 210일
+      expect(totalDays).toBe(210);
     });
   });
 });

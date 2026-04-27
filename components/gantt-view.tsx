@@ -22,7 +22,7 @@ export type GanttViewProps = {
 
 const LEFT_COL_WIDTH = '240px';
 const ROW_HEIGHT = '36px';
-const INITIAL_PAD_DAYS = 30;
+const INITIAL_PAD_DAYS = 90;
 const EDGE_THRESHOLD_PX = 200;
 const EXTEND_DAYS = 60;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -64,15 +64,11 @@ function calculateInitialRangePx(tasks: Task[], now: Date): GanttRangePx {
 
 export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
   const [mode, setMode] = useState<GanttMode>('week');
-  const initialRange = useMemo(
-    () => calculateInitialRangePx(tasks, now),
-    [tasks, now],
+  // 초기 범위는 마운트 시 1회만 계산. 이후 onScroll 로 동적 확장.
+  // (now 기본값이 매 렌더 새 객체라 useMemo 의존성으로 못 씀 → useState init 사용)
+  const [range, setRange] = useState<GanttRangePx>(() =>
+    calculateInitialRangePx(tasks, now),
   );
-  const [range, setRange] = useState<GanttRangePx>(initialRange);
-  // tasks/now 변경 시 초기 범위 재계산.
-  useEffect(() => {
-    setRange(initialRange);
-  }, [initialRange]);
   const ppd = pxPerDay(mode);
   const flat = useMemo(() => flattenTree(buildTaskTree(tasks)), [tasks]);
   const marks = useMemo(() => getDateMarks(range, mode), [range, mode]);
