@@ -130,7 +130,7 @@ describe('getDateMarks (#31 — 모드별 라벨)', () => {
       totalDays: 100, // 10/15/2025 ~ 1/22/2026 → 11/1, 12/1, 1/1
     };
     const marks = getDateMarks(wide, 'month', 2026);
-    expect(marks.map((m) => m.label)).toEqual(['25/11월', '25/12월', '1월']);
+    expect(marks.map((m) => m.label)).toEqual(['25년 11월', '25년 12월', '1월']);
   });
 });
 

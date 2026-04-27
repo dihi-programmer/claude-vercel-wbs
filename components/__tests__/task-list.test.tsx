@@ -148,6 +148,20 @@ describe('<TaskList />', () => {
       expect(screen.getByTestId('task-date-range')).toHaveTextContent('—');
     });
 
+    it('다른 해 날짜 → "YY/M/D" 포맷 (#31 후속)', () => {
+      const t = makeTask({
+        id: 'a',
+        title: 'X',
+        startDate: '2025-12-30',
+        dueDate: '2026-01-05',
+      });
+      renderWithChakra(
+        <TaskList tasks={[t]} onRowClick={vi.fn()} now={new Date('2026-05-14T00:00:00Z')} />,
+      );
+      // 2025년은 다른 해 → YY/M/D, 2026년은 올해 → M/D
+      expect(screen.getByTestId('task-date-range')).toHaveTextContent('25/12/30 ~ 1/5');
+    });
+
     it('과거 목표 기한 + status=doing → "지남" 배지 + data-overdue="true"', () => {
       const t = makeTask({
         id: 'a',

@@ -88,7 +88,7 @@ function formatMD(d: Date, currentYear: number): string {
 function formatMonthLabel(d: Date, currentYear: number): string {
   const m = d.getUTCMonth() + 1;
   const y = d.getUTCFullYear();
-  return y === currentYear ? `${m}월` : `${yy(y)}/${m}월`;
+  return y === currentYear ? `${m}월` : `${yy(y)}년 ${m}월`;
 }
 
 export function getDateMarks(
