@@ -39,3 +39,22 @@ export function buildTaskTree(tasks: Task[]): TaskNode[] {
 
   return roots;
 }
+
+/**
+ * DFS 평탄화. collapsedIds 에 포함된 노드의 자식들은 결과에서 제외 (목록/간트
+ * 좌측 트리의 펼침/접힘에 공통 사용).
+ */
+export function flattenVisibleNodes(
+  nodes: TaskNode[],
+  collapsedIds: Set<string>,
+): TaskNode[] {
+  const out: TaskNode[] = [];
+  const walk = (n: TaskNode): void => {
+    out.push(n);
+    if (!collapsedIds.has(n.task.id)) {
+      for (const child of n.children) walk(child);
+    }
+  };
+  for (const n of nodes) walk(n);
+  return out;
+}

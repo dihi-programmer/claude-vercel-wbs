@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Badge, Box, Button, Flex, Stack, Text } from '@chakra-ui/react';
 import type { Task } from '@/lib/db/schema';
 import type { TaskStatus } from '@/lib/validation/task';
-import { buildTaskTree, type TaskNode } from '@/lib/tasks/build-tree';
+import { buildTaskTree, flattenVisibleNodes } from '@/lib/tasks/build-tree';
 import { isOverdue } from '@/lib/overdue/is-overdue';
 import { StatusBadge } from './status-badge';
 
@@ -33,18 +33,6 @@ function formatDateRange(start: string | null, due: string | null, currentYear: 
   if (!due) return `${formatShortDate(start!, currentYear)} ~`;
   if (!start) return `~ ${formatShortDate(due, currentYear)}`;
   return `${formatShortDate(start, currentYear)} ~ ${formatShortDate(due, currentYear)}`;
-}
-
-function flattenVisibleNodes(nodes: TaskNode[], collapsedIds: Set<string>): TaskNode[] {
-  const out: TaskNode[] = [];
-  const walk = (n: TaskNode): void => {
-    out.push(n);
-    if (!collapsedIds.has(n.task.id)) {
-      for (const child of n.children) walk(child);
-    }
-  };
-  for (const n of nodes) walk(n);
-  return out;
 }
 
 export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick, onStatusCycle, now = new Date() }: TaskListProps) {
