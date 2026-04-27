@@ -121,4 +121,15 @@ describe('<GanttBar />', () => {
       expect(container.querySelector('[data-overdue]')).toBeNull();
     });
   });
+
+  describe('"일정 없음" 수직 정렬 (#29)', () => {
+    it('빈 상태 wrapper 가 data-testid="gantt-empty" 로 렌더되고 텍스트 포함', () => {
+      const { container } = renderWithChakra(
+        <GanttBar startDate={null} dueDate={null} progress={0} range={range} />,
+      );
+      const empty = container.querySelector('[data-testid="gantt-empty"]');
+      expect(empty).not.toBeNull();
+      expect(empty?.textContent).toMatch(/일정 없음/);
+    });
+  });
 });
