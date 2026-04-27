@@ -1,17 +1,25 @@
 'use client';
 
 import { Box, Text } from '@chakra-ui/react';
-import { calculateBar, type GanttRange } from '@/lib/gantt/calc';
+import { calculateBarPx } from '@/lib/gantt/calc';
 
 export type GanttBarProps = {
   startDate: string | null;
   dueDate: string | null;
   progress: number;
-  range: GanttRange;
+  epoch: Date;
+  pxPerDay: number;
   overdue?: boolean;
 };
 
-export function GanttBar({ startDate, dueDate, progress, range, overdue = false }: GanttBarProps) {
+export function GanttBar({
+  startDate,
+  dueDate,
+  progress,
+  epoch,
+  pxPerDay,
+  overdue = false,
+}: GanttBarProps) {
   // SPEC §7 G-2: 시작일/목표 기한 중 하나라도 비면 막대 없이 "— 일정 없음 —" 표기.
   if (!startDate || !dueDate) {
     return (
@@ -30,15 +38,15 @@ export function GanttBar({ startDate, dueDate, progress, range, overdue = false 
     );
   }
 
-  const bar = calculateBar(startDate, dueDate, progress, range);
+  const bar = calculateBarPx(startDate, dueDate, progress, epoch, pxPerDay);
 
   return (
     <Box
       position="absolute"
       top="50%"
       transform="translateY(-50%)"
-      left={`${bar.leftPct}%`}
-      width={`${bar.widthPct}%`}
+      left={`${bar.leftPx}px`}
+      width={`${bar.widthPx}px`}
       height="20px"
       borderRadius="sm"
       bg="blue.100"
@@ -46,8 +54,8 @@ export function GanttBar({ startDate, dueDate, progress, range, overdue = false 
       // SPEC §8 H-2 간트: overdue 시 빨강 테두리.
       borderWidth={overdue ? '2px' : '0'}
       borderColor={overdue ? 'red.500' : 'transparent'}
-      data-left-pct={String(bar.leftPct)}
-      data-width-pct={String(bar.widthPct)}
+      data-left-px={String(bar.leftPx)}
+      data-width-px={String(bar.widthPx)}
       data-progress-pct={String(bar.progressPct)}
       data-overdue={String(overdue)}
     >

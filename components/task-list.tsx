@@ -17,17 +17,22 @@ export type TaskListProps = {
   now?: Date;
 };
 
-function formatShortDate(iso: string): string {
-  // '2026-05-01' → '5/1' (선행 0 제거, 월/일 관용 포맷)
+function formatShortDate(iso: string, currentYear: number): string {
+  // 올해 → 'M/D', 다른 해 → 'YY/M/D' (간트 라벨과 동일 규칙)
   const d = new Date(`${iso}T00:00:00Z`);
-  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+  const m = d.getUTCMonth() + 1;
+  const day = d.getUTCDate();
+  const y = d.getUTCFullYear();
+  if (y === currentYear) return `${m}/${day}`;
+  const yy = String(y % 100).padStart(2, '0');
+  return `${yy}/${m}/${day}`;
 }
 
-function formatDateRange(start: string | null, due: string | null): string {
+function formatDateRange(start: string | null, due: string | null, currentYear: number): string {
   if (!start && !due) return '—';
-  if (!due) return `${formatShortDate(start!)} ~`;
-  if (!start) return `~ ${formatShortDate(due)}`;
-  return `${formatShortDate(start)} ~ ${formatShortDate(due)}`;
+  if (!due) return `${formatShortDate(start!, currentYear)} ~`;
+  if (!start) return `~ ${formatShortDate(due, currentYear)}`;
+  return `${formatShortDate(start, currentYear)} ~ ${formatShortDate(due, currentYear)}`;
 }
 
 function flattenVisibleNodes(nodes: TaskNode[], collapsedIds: Set<string>): TaskNode[] {
@@ -46,6 +51,7 @@ export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick, on
   const tree = useMemo(() => buildTaskTree(tasks), [tasks]);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const visibleNodes = useMemo(() => flattenVisibleNodes(tree, collapsedIds), [tree, collapsedIds]);
+  const currentYear = now.getUTCFullYear();
 
   const toggleCollapsed = (id: string): void => {
     setCollapsedIds((prev) => {
@@ -144,7 +150,7 @@ export function TaskList({ tasks, onRowClick, onAddChildClick, onDeleteClick, on
                       color={overdue ? 'red.500' : 'fg.muted'}
                       whiteSpace="nowrap"
                     >
-                      {formatDateRange(task.startDate, task.dueDate)}
+                      {formatDateRange(task.startDate, task.dueDate, currentYear)}
                     </Text>
                     {overdue && (
                       <Badge colorPalette="red" variant="subtle" fontSize="xs">
