@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Box, Button, Flex, Text } from '@chakra-ui/react';
 import type { Task } from '@/lib/db/schema';
 import {
@@ -93,6 +93,21 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
   const lastCenteredNonceRef = useRef<number>(0);
   const [centerNonce, setCenterNonce] = useState(0);
   const goToToday = () => setCenterNonce((n) => n + 1);
+
+  // #41 무한 스크롤 prepend 시 시각적 점프 제거:
+  // - extendingRef: burst 안 동시 prepend 방지 락
+  // - pendingPrependPxRef: prepend 한 px 누적
+  // - useLayoutEffect 가 paint 이전 동기 scrollLeft 보정
+  const extendingRef = useRef(false);
+  const pendingPrependPxRef = useRef(0);
+  useLayoutEffect(() => {
+    if (!extendingRef.current) return;
+    if (pendingPrependPxRef.current > 0 && scrollerRef.current) {
+      scrollerRef.current.scrollLeft += pendingPrependPxRef.current;
+      pendingPrependPxRef.current = 0;
+    }
+    extendingRef.current = false;
+  }, [range]);
 
   // 마운트 시 + 모드 변경 시 + "오늘" 클릭 시 today 를 viewport 중심으로.
   // 컨텐츠 폭이 viewport 보다 좁아 today 를 중앙에 둘 수 없으면
@@ -225,22 +240,19 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
         data-epoch-iso={range.epoch.toISOString()}
         data-total-days={String(range.totalDays)}
         onScroll={(e) => {
+          if (extendingRef.current) return; // burst 중 동시 prepend 방지
           const el = e.currentTarget;
           const nearLeft = el.scrollLeft < EDGE_THRESHOLD_PX;
           const nearRight =
             el.scrollWidth - (el.scrollLeft + el.clientWidth) < EDGE_THRESHOLD_PX;
           if (nearLeft) {
-            const out = extendRange(range, 'past', EXTEND_DAYS);
-            setRange(out.range);
-            // 시각적 점프 방지 — prepend 한 만큼 scrollLeft 보정.
-            requestAnimationFrame(() => {
-              if (scrollerRef.current) {
-                scrollerRef.current.scrollLeft += out.deltaDaysAtStart * ppd;
-              }
-            });
+            extendingRef.current = true;
+            // 다음 사이클의 useLayoutEffect 가 paint 이전 scrollLeft 를 동기 보정.
+            pendingPrependPxRef.current += EXTEND_DAYS * ppd;
+            setRange((prev) => extendRange(prev, 'past', EXTEND_DAYS).range);
           } else if (nearRight) {
-            const out = extendRange(range, 'future', EXTEND_DAYS);
-            setRange(out.range);
+            extendingRef.current = true;
+            setRange((prev) => extendRange(prev, 'future', EXTEND_DAYS).range);
           }
         }}
       >
