@@ -12,6 +12,7 @@ import {
 import { buildTaskTree, type TaskNode } from '@/lib/tasks/build-tree';
 import { isOverdue } from '@/lib/overdue/is-overdue';
 import { GanttBar } from './gantt-bar';
+import { GanttModeToggle } from './gantt-mode-toggle';
 
 export type GanttViewProps = {
   tasks: Task[];
@@ -59,7 +60,7 @@ function calculateInitialRangePx(tasks: Task[], now: Date): GanttRangePx {
 }
 
 export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
-  const [mode] = useState<GanttMode>('week');
+  const [mode, setMode] = useState<GanttMode>('week');
   const range = useMemo(
     () => calculateInitialRangePx(tasks, now),
     [tasks, now],
@@ -73,15 +74,28 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
     ((startOfDayUtc(now).getTime() - range.epoch.getTime()) / ONE_DAY_MS) * ppd;
 
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const prevPpdRef = useRef<number>(ppd);
 
   // 마운트 시 오늘 중심으로 스크롤 보정.
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
     el.scrollLeft = todayPx - el.clientWidth / 2;
-    // mount 1회만; mode 변경 보정은 Stage 3 에서 처리.
+    // mount 1회만; mode 변경 보정은 아래 effect 에서.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 모드 변경 시: 변경 직전 viewport 중심에 보이던 날짜를 새 모드에서도
+  // 동일한 viewport 중심에 두도록 scrollLeft 를 보정.
+  useEffect(() => {
+    const el = scrollerRef.current;
+    const prevPpd = prevPpdRef.current;
+    if (!el || prevPpd === ppd) return;
+    const prevCenterPx = el.scrollLeft + el.clientWidth / 2;
+    const centerDays = prevCenterPx / prevPpd;
+    el.scrollLeft = centerDays * ppd - el.clientWidth / 2;
+    prevPpdRef.current = ppd;
+  }, [ppd]);
 
   if (tasks.length === 0) {
     return (
@@ -92,6 +106,7 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
   }
 
   return (
+    <Box>
     <Flex borderWidth="1px" borderRadius="md" overflow="hidden">
       {/* 좌측: 작업 트리 */}
       <Box width={LEFT_COL_WIDTH} flexShrink={0} borderRightWidth="1px">
@@ -195,5 +210,10 @@ export function GanttView({ tasks, now = new Date() }: GanttViewProps) {
         </Box>
       </Box>
     </Flex>
+    {/* 하단 모드 토글 */}
+    <Flex justify="center" mt={3}>
+      <GanttModeToggle value={mode} onChange={setMode} />
+    </Flex>
+    </Box>
   );
 }
