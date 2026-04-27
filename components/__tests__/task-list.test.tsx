@@ -270,6 +270,36 @@ describe('<TaskList />', () => {
       expect(onRowClick).not.toHaveBeenCalled();
     });
 
+    it('depth 별 들여쓰기가 24px 일관 증분 (#27 — 2depth+ Chakra spacing fallback 버그)', () => {
+      const a = makeTask({ id: 'a', title: 'A' });
+      const b = makeTask({
+        id: 'b',
+        title: 'B',
+        parentId: 'a',
+        createdAt: new Date('2026-04-02T00:00:00Z'),
+      });
+      const c = makeTask({
+        id: 'c',
+        title: 'C',
+        parentId: 'b',
+        createdAt: new Date('2026-04-03T00:00:00Z'),
+      });
+      const d = makeTask({
+        id: 'd',
+        title: 'D',
+        parentId: 'c',
+        createdAt: new Date('2026-04-04T00:00:00Z'),
+      });
+      const { container } = renderWithChakra(
+        <TaskList tasks={[a, b, c, d]} onRowClick={vi.fn()} />,
+      );
+      const rows = container.querySelectorAll('[data-depth]');
+      const indentPxs = Array.from(rows).map((r) =>
+        Number(r.getAttribute('data-indent-px')),
+      );
+      expect(indentPxs).toEqual([12, 36, 60, 84]);
+    });
+
     it('하위작업 유무와 무관하게 toggle 슬롯이 동일한 너비로 렌더 (#27)', () => {
       const p = makeTask({ id: 'p', title: 'Parent' });
       const c = makeTask({
