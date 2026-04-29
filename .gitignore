@@ -62,6 +62,8 @@ ehthumbs.db
 # ── Claude Code — per-machine settings only ───────────────
 # .claude/skills/ 는 프로젝트 공용이므로 커밋 대상.
 .claude/settings.local.json
+.claude/ralph-loop.local.md
+.claude/.ralph-loop.local.md
 
 # Local Playwright MCP screenshots
 *.png
